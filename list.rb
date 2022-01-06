@@ -206,16 +206,16 @@ module Collections
       @modification_count = 0
     end
 
-    def count_modification
-      @modification_count += 1
-    end
-
     def clear
       count_modification
       do_clear
     end
 
     private
+    def count_modification
+      @modification_count += 1
+    end
+
     def do_clear
       raise NoMethodError, "#{self.class} does not implement do_clear()"
     end
@@ -311,16 +311,16 @@ module Collections
       @modification_count = 0
     end
 
-    def count_modification
-      @modification_count += 1
-    end
-
     def clear
       count_modification
       do_clear
     end
 
     private
+    def count_modification
+      @modification_count += 1
+    end
+
     def do_clear
       raise NoMethodError, "#{self.class} does not implement do_clear()"
     end
@@ -471,6 +471,98 @@ module Collections
     def do_slice(i, n)
       list = ArrayList.new(type, fill_elt)
       list.add(*(@store[i, n])) # Compare Common Lisp version to calculate what to add!
+      list
+    end
+  end
+
+  class ArrayListX < MutableList
+    def initialize(type=Object, fill_elt=nil)
+      super(type, fill_elt)
+      @store = []
+      @offset = 0
+    end
+
+    def size
+      @store.size - @offset
+    end
+
+    def empty?
+      size.zero?
+    end
+
+    def iterator
+      RandomAccessListIterator.new(self)
+    end
+    
+    def list_iterator(start=0)
+      RandomAccessListListIterator.new(self, start)
+    end
+    
+    private
+    def do_clear
+      @store = []
+      @offset = 0
+    end
+
+    def do_contains?(obj)
+      @store[@offest..-1].include?(obj) # ???????
+    end
+
+    def do_do_add(*objs)
+      @store += objs
+    end
+
+    def do_do_insert(i, obj)
+      j = i + @offset
+
+      if @offset.zero?  ||  size/2 > i
+        @store.insert(j, obj)
+      else
+        @offset -= 1
+        @store[@offset..j] = @store[@offset+1...j] # collapses element???
+        @store[i+@offset] = obj
+      end
+    end
+    
+    def do_do_delete(i)
+      j = i + @offset
+      doomed = @store[j]
+
+      if i <= size/2
+        @store[@offset+1..j] = @store[@offset...j] # collapses element???
+        @store[@offset] = fill_elt
+        @offset += 1
+      else
+        @store.delete_at(i)
+      end
+
+      doomed
+    end
+    
+    def do_get(i)
+      @store[i+@offset]
+    end
+
+    def do_set(i, obj)
+      @store[i+@offset] = obj
+    end
+    
+    def do_index(obj)
+      pos = @store.index(obj)
+      if pos.nil?
+        pos
+      else
+        pos + @offset
+      end
+    end
+
+    #
+    #    Returns empty ArrayList if negative i is too far
+    #    vs. Array#slice => nil
+    #    
+    def do_slice(i, n)
+      list = ArrayList.new(type, fill_elt)
+      list.add(*(@store[i+@offset, n])) # Compare Common Lisp version to calculate what to add!
       list
     end
   end
@@ -1086,7 +1178,6 @@ module Collections
     end
 
     def do_do_insert(i, obj)
-      count_modification
       size.downto(i+1) do |j|
         @store[j] = @store[j-1]
       end
@@ -1094,7 +1185,6 @@ module Collections
     end
 
     def do_do_delete(i)
-      count_modification
       doomed = @store[i]
       i.upto(size-2) do |j|
         @store[j] = @store[j+1]
