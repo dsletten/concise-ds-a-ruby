@@ -1,0 +1,115 @@
+Review
+
+1. What are the alternatives for controlling iteration?
+   Essentially the process of iteration is controlled by client code or not. If the client is responsible for executing each step of the iteration, then
+   this is known as external iteration. The client still relies on access exposed by the collection. It is not allowed to directly manipulate the collection.
+
+   If the client is not controlling the iteration but rather simply specifies what operation to apply to each element, then this is internal iteration.
+
+   Fox defines internal iteration specifically in terms of the collection being in control. However, the GoF looks at internal iteration only from the perspective
+   of a distinct iterator object.
+
+   In fact, Fox leaves a crack in his definition. He does not explicitly classify the GoF case where an iterator manages the iteration rather than the collection itself.
+   Unfortunately this muddies much of his subsequent discussion. Things get even fuzzier when he throws the programming language itself into the mix. Iteration can
+   be controlled by:
+   - Collection
+   - Client
+   - Iterator
+   - Language construct
+
+   The common issue with internal iteration is that the client is not driving the iteration. Ruby supports both of these views with internal iteration in
+   collections as well as the internal iteration operations of Enumerator objects e.g., each() (vs. the external Enumerator operations: next(), rewind()).
+
+   The more common pattern, as in Java, is to establish external iteration with an iterator.
+
+2. Where might iteration mechanisms reside?
+   The mechanism may reside in the language itself either via built-in control structures such as "for each" loops. Less commonly in more expressive languages such as Lisp,
+   such control structures can be added by the user by means of macros.
+
+   Alternatively, the iteration mechanism may exist in the collection itself. The collection may retain control of the iteration (internal) or may expose control to client
+   code (external), although Ruby does not support this. This would entail a collection exposing such external operations as rewind(), empty?(), current(), next(). Obviously only
+   one iteration could be ongoing (shared by all clients attempting to traverse the collection). As GoF points out, this complicates the interface of the collection. Avoiding
+   such complications are one purpose of the Iterator design pattern.
+
+   Finally, iteration may occur in an iterator object distinct from the collection. Ruby's Enumerator class provides features of both internal and external iteration.
+   
+3. What are the six alternatives for designing collection iteration facilities?
+     Internal
+       - Language
+       - Collection
+       - Iterator
+     External
+       - Language
+       - Collection
+       - Iterator
+4. What is a software design pattern?
+   A design pattern applied to software issues. That is, a recognized, well-understood approach to solving a problem with a name that facilitates communicating about it.
+5. What functions must an external Iterator object provide in the Iterator pattern?
+   In the most verbose case, it must be possible to:
+   - initialize the Iterator (rewind())
+   - test whether iteration is complete (Fox oddly calls this empty?() -- GoF uses the more sensible isDone())
+   - present the current element (current() -- If there is one)
+   - advance to the next element (next() -- Eventually completes the iteration.)
+   GoF discusses collapsing these into a single method, which is essentially what Ruby's Enumerator does:
+   - Iterator is initialized by constructor
+   - next() method returns current element and advances to the next. Eventually raises StopIteration exception at end of iteration.
+6. Which of the six iteration design alternatives does Ruby not support? External iteration exposed by a collection itself.
+7. What is the Enumerable module in Ruby?
+   Enumerable is a mixin module which requires a collection class to implement a method each() to iterate over each element in the collection. Many other auxiliary methods are
+   then available built on the back of the each() method: count(), include?(), map(), ... If the collection also implements an ordering via <=>, then Enumerable provides: sort(), min(), max(), ...
+8. What does the contains?() operation return when a Collection is empty?
+   An empty Collection contains no elements. In other words, for any given element it is not true that the Collection contains it.
+   Therefore contains?() should always return false.
+
+Exercises
+
+1. What is the point of an iterator when each element of a list can already be accessed one by one using indices?
+   a. Not all list implementations expose such access. In any case, it potentially leaks implementation details.
+   b. Iteration by means of indices is less efficient in most cases, e.g., with a singly-linked list, since each access is independent and
+      must traverse from the head of the list. An iterator would maintain a reference to the current element, so that the next element access would only require following one pointer.
+   c. It can be more convenient for the client rather than having to maintain and update the index manually.
+2. Explain why a Dispenser does not have an associated iterator.
+   A Dispenser is intended to restrict access to the elements it contains. A stack only makes the top visible. A queue only exposes the front/rear.
+   Providing an iterator to traverse all elements is counter to the intent of a Dispenser.
+3. Java has iterators, but the Java Iterator interface does not have a rewind() operation. Why not?
+   rewind() is not a fundamental iterator operation. In Java, one would simply call for another iterator.
+4. Would it be possible to have an Iterator interface with only a single operation? If so, how could the four Iterator functions be realized? See question 5. above.
+5. How might external iterators residing in collections be added to Ruby?
+   This is possible in Ruby since classes are never closed, but it complicates the collection class implementation. The collection would need to add a cursor field
+   to keep track of the position of the current element. The collection would also only be capable of performing one traversal at a time.
+6. Write a generic Ruby implementation of the Collection contains?() operation using
+  (Essentially the include?() method of Enumerable)
+  a) an internal collection iterator
+  c.each do |elt|
+    return true if elt == obj
+  end
+  return false  
+  b) an external iterator object
+  loop do
+    while true
+      elt = enum.next
+      return true if elt == obj
+    end
+  end
+  return false
+      
+  c) an internal iterator object
+  enum.include?(elt)
+  d) the for/in loop construct
+  def contains?(obj)
+    for elt in coll
+      return true if elt == obj
+    end
+    return false
+  end
+
+7. What happens to an iterator (any iterator) when its associated collection changes during iteration?
+   There is no simple, general answer to this question. It depends on the nature of the collection and what change it undergoes. If a new element is added to the end
+   of the collection beyond what the iterator has already traversed, it's possible that nothing goes wrong. However, if an element is inserted at the beginning, it may
+   throw off the iterator, possibly even leading to repeated "current" elements. On the other hand, using an Enumerator in Ruby protects one from modifications to the original collection.
+8. Consider the problem of checking whether two collections contain the same values. Can this problem be solved using collection internal iterators? Can it be solved
+using iterator objects?
+   This is not possible with internal iterators since they would execute independently of each other. There is no way to synchronize them to compare corresponding elements.
+   On the other hand, it may be possible with external iterators. It depends on the type of collection and what is meant by "contain the same values". The arrays [1, 2, 3] and [3, 1, 2] contain
+   the same values, but it would be necessary to traverse each separately to determine this. In the simpler case of two collections of the same type with elements in the same order, it
+   would be straightforward to use 2 external iterators to step through both comparing elements pairwise.

@@ -1,0 +1,97 @@
+Review
+
+1. What is the difference between a simple and a structured type?
+   Both simple and structured types implement ADTs. The difference is how the language treats the values of the carrier set of each. Simple types have values that are atomic. Structured
+   types have values that are not. This roughly corresponds to the distinction between values that could fit in a register (passed by value) vs. those too large, requiring a pointer/reference.
+   Java: primitive vs. reference types
+   C: scalar vs. pointer types (strings/arrays)
+2. What is a pure object-oriented language?
+   A pure OO lang is consistent in that all values are objects and respond to methods. By contrast, a language such as Java draws a distinction between primitive types (byte, int, double, ...) with
+   predefined operators and reference types (possibly null) that belong to classes/interfaces.
+3. Name two ways that Symbol instances differ from String instances in Ruby.
+   a. The sequence of characters that represents a Symbol's name is immutable unlike a String's sequence of characters.
+   b. Symbols are interned into a (the?) symbol table so that any reference to a Symbol with a given name is a unique object. Strings consisting of the same sequence of characters may, in fact,
+      be different objects.
+4. Is String a simple or structured type in Ruby? Explain.
+   Ruby Strings are not atomic. Individual characters (substrings of length 1!!) can be accessed or modified.
+   > Fox argues that this makes Strings a simple type. Ruby lacks a char type with which to compose a structured type...
+5. List the carrier set of Range of {1, 2, 3} (inclusive). In this type, what values are 1..1, 2..1, and 1...3? What is max(1...3)?
+   C = {{}, {1}, {2}, {3}, {1, 2}, [{1, 3} D'oh!], {2, 3}, {1, 2, 3}}
+   1..1 = {1}
+   2..1 = {}
+   1...3 = {1, 2}
+   max(1...3) = 2
+6. If an array holds integers, each of which is four bytes long, how many bytes from the base location of the array is the location of the fifth element?
+   b + (5-1) * 4 = b + 16
+7. Is the formula for finding the location of an element in a dynamic array different from the formula for finding the location of an element in a static array?
+   Both involve uniform offsets from a base address. However, if a dynamic array has been resized in excess of the current needed capacity it may need to detect which part of the array is
+   currently active.
+8. When a dynamic array expands, why can’t the existing elements be left in place and extra memory simply be allocated at the end of the existing memory allocation?
+   The memory is allocated by the OS with no guarantees on where in the process's address space the contiguous block will be located. Extending the original array in place would
+   require moving any other values already located there or risk overwriting them.
+
+1. Choose a language that you know well and list its simple and structured types.
+Common Lisp
+Simple
+- Numbers (Fixnum, Bignum, Ratio, Float)
+- Character
+- Symbol
+- Function
+- Random state
+- Stream
+- Pathname
+
+Structured
+- Cons (List)
+- String
+- Package?
+- Array/Vector
+
+2. Choose a language that you know well and compare its simple and structured types to those of Ruby. Does one language have a type that is simple while the corresponding type in the other language is structured? Which language has more simple types or more structured types?
+Fox argues that Ruby Strings are a simple type. They are clearly structured in Common Lisp--sequences of character objects.
+Many Ruby types are similar since Lisp was a big influence on Matz's design of the language.
+
+3. Every Ruby type is a class, and every Ruby value is an instance of a class. What advantage and disadvantages do you see with this approach?
+Advantages
+- Consistency. Java has to box/unbox primitives when Objects are needed.
+- Flexibility. Integrating Bignums into language allows normal arithmetic operators not BigInteger.ONE.add(BigInteger.TWO) !!
+
+Disadvantages
+- Some performance penalty. Primitive types reflect hardware realities.
+
+4. Write pseudocode to implement the cover?() operation for the Range class in Ruby.
+This is actually include?
+index = start
+while index < end
+  if x == index return true
+  index = next_elt
+end
+return false
+
+Ruby docs says:
+return begin <= x && x <= end
+
+5. Give an example of a Ruby String range r and String instance v such that r.cover?(v) and r.include?(v) differ.
+('a'..'z').cover?("pung") => true
+('a'..'z').include?("pung") => false
+
+6. Suppose a dynamic integer array a with indices beginning at 0 has 1000 elements and the line of code a[1000] = a[5] is executed. How many array values must be moved from one memory location to another to complete this assignment statement?
+The initial 1000 elements are indexed from 0-999, so assigning to a[1000] requires the array to grow. After the new memory is allocated, all 1000 of the original values must be moved.
+Then the value at a[5] must be copied into the new 1001st element. Thus 1001 values must be moved.
+
+7. Memory could be freed when a dynamic array shrinks. What advantages or disadvantages might this have?
+Obviously the advantage is that memory that is currently no longer needed is returned to the system. The disadvantage is similar to the process of growing an array. A new block of memory has to
+be allocated and values copied. If the array at one time required a larger amount of memory, it may be simpler to hold on to the existing memory in case it grows again.
+
+8. To use a static array, data must be recorded about the base location of the array, the size of the elements (for indexing), and the number of elements in the array (to check that indexing is within bounds). What information must be recorded to use a dynamic array?
+All of the above to reflect the portion of the array that is currently active. It must also maintain a record of the ultimate capacity of the current array before resizing becomes necessary.
+
+9. State a formula to determine how far from the base location of a Ruby array an element with index i is when i is a negative number.
+For normal indexing, an element at index i is located at base b + i * m, where m is the size of an element. Thus, the final elt i = n-1 is located at
+b + (n-1) * m. This is equivalent to index -1. Thus, a negative index j accesses the element at b + (n+j) * m.
+(-n <= j <= -1)
+
+10. Give an example of a Ruby array reference that will cause an indexing error at run time.
+a[nil]
+a["pung"]
+a[:foo]

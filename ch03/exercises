@@ -1,0 +1,52 @@
+Review
+
+1. Are sets structured? Do sets have access restrictions? Do sets have keyed access?
+Sets are not structured. The mathematical idea of a set does not inherently impose any sort of order or arrangement (although the elements themselves may be capable of being ordered):
+{1, 2, 3} = {2, 1, 3} (Definition of set equality A ⊂ B and B ⊂ A)
+There are no access restrictions on sets. The primary operation of checking membership applies to any element.
+Sets do not have keyed access.
+
+2. If c is a Container and c.clear() is called, what does c.empty?() return? What does c.size() return?
+clear() causes the container to be empty, so that empty?() must return true.
+An empty container holds 0 elements so size() must return 0.
+
+3. What would happen if you forgot to write a method in the Container interface in some class in the container hierarchy that you implemented in Ruby? What would happen if you tried to call that method from an instance of the class?
+No compile-time check would detect that a class failed to implement a required method.
+At runtime method_missing() would be called. By default, this would raise an exception.
+
+Exercises
+
+1. Consider a kind of Container called a Log that is an archive for summaries of transactions. Summaries can be added to the end of a Log, but once appended, they cannot be deleted or changed. When a summary 
+is appended to a Log, it is time-stamped, and summaries can be retrieved from a Log by their time stamps. The summaries in a Log can also be examined in arbitrary order.
+a) Is a Log structured? If so, what kind of structure does a Log have?
+Yes. It orders summaries linearly as by time.
+b) Does a Log have access restrictions?
+Yes. Elements can only be added at the end. There are no retrieval access restrictions.
+c) Does a Log provide keyed access? If so, what is the key?
+Yes. The timestamp.
+d) In the container hierarchy, would a Log be a Collection or a Dispenser?
+The Log is potentially traversable if there is a meaningful way of iterating over timestamps. But this is not really a fundamental property of the container. It seems more appropriate to consider it
+a Dispenser.
+
+2. Consider a kind of Container called a Shoe used in an automated Baccarat program. When a Shoe instance is created, it contains eight decks of Cards in random order. Cards can be removed one at a time from 
+the front of a Shoe. Cards cannot be placed in a Shoe, modified, or removed from any other spot. No Cards in a Shoe can be examined.
+a) Is a Shoe structured? If so, what kind of structure does a Shoe have?
+Yes. The cards are shuffled but they represent a particular order. There is a first card, then a next, etc...
+b) Does a Shoe have access restrictions?
+Yes. Cards can only be removed from the front, and no cards may be added to an existing instance.
+c) Does a Shoe provide keyed access? If so, what is the key?
+No. There is no way to retrieve an arbitrary card.
+d) In the container hierarchy, would a Shoe be a Collection or a Dispenser?
+This is the epitome of a Dispenser!
+
+3. Consider a kind of Container called a Randomizer used to route packets in an anonymizer. Packets go into the Randomizer at a single input port, and come out randomly at one of n output ports, each of which 
+sends packets to a different router. Packets can only go into a Randomizer at the single input port, and can only come out one of the n output ports. Packets come out of a single output port in the order they 
+enter a Randomizer. Packets cannot be accessed when they are inside a Randomizer.
+a) Is a Randomizer structured? If so, what kind of structure does a Randomizer have?
+Yes. Packets are linearly ordered at the output ports.
+b) Does a Randomizer have access restrictions?
+Yes. There is only one means to add a packet via the input port. Furthermore, packets can only be retrieved in order.
+c) Does a Randomizer provide keyed access? If so, what is the key?
+No.
+d) In the container hierarchy, would a Randomizer be a Collection or a Dispenser?
+A Randomizer is a Dispenser. Packets can not be collectively visited.

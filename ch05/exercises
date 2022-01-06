@@ -1,0 +1,48 @@
+Review
+
+1. The pop() operation in the stack ADT returns a stack, while the pop() operation in the Stack interface returns a value of type T. Why are these so different?
+   The ADT method represents a mathematical mapping from one element of the carrier set to another (FP). One stack is input and another is output. But the implementation
+   method relies on transforming (destructively) an instance of a class. The state of the instance changes, and in a sense the same object is both the input and the output (OOP).
+   In other words, there is no real output, so why not return the popped element as a convenience?
+2. Should the size() operation from the Container interface return the capacity of a Stack or the number of elements currently in a Stack?
+   The Container interface clearly defines the size() operation in terms of the number of elements held by the container. It is not a measure of capacity.
+   
+   What value should be returned by this operation in the ArrayStack implementation?
+   The method should return the number of elements on the stack! In other words, the size of the "active" portion of the underlying dynamic array.
+   
+3. The nodes in a LinkedStack hold a reference for every stack element, increasing the space needed to store data. Does this fact invalidate the claim that a LinkedStack
+   uses space more efficiently than an ArrayStack?
+   An ArrayStack that is completely full is the only optimal stack. Ever other stack wastes memory that has nonetheless been allocated. It is true that an array of primitive
+   values that are held directly in the array (say in C or Java) would consume less memory than a linked structure consisting entirely of pointers. (A C linked structure could
+   also hold elements directly with only a pointer to the "cdr".)
+   But Ruby and Lisp arrays  as well as Java ArrayLists hold references to their elements anyway. So this consumes the same amount of memory as the "car" pointers in the
+   corresponding linked structure. The only saving is in eliminating the need to store "cdr" pointers. But again, the array only becomes competitive when it is more than half full.
+
+Exercises
+
+1. State three more axioms about the stack of T ADT.
+   empty?(clear(s)) = true
+   size(s) < size(push(s, e))
+   size(s) > size(pop(s, e))
+2. Suppose that an ArrayStack is implemented so that the top elements is always stored at store[0]. What are the advantages or disadvantages should happen
+   if a precondition of a Stack operation is violated happen if a precondition of a Stack operation is violated?
+   Huh????
+
+3. How can a programmer who is using an ArrayStack or a LinkedStack make sure that her code will not fail because it violates a precondition?
+   The only true preconditions involve pop()/top() operating on a non-empty stack. The programmer should call the empty? method first...
+4. Should a LinkedStack have a count attribute? Explain why or why not.
+   Yes. The alternative is to traverse the linked structure every time that size() is called...
+5. Suppose a LinkedStack has a count attribute. State a class invariant relating the count and topNode attribute.
+   If count is n > 0, then topNode has n-1 Nodes in its tail.
+6. Could the top element be stored at the tail of a LinkedStack? What consequences would this have for the implementation?
+   Of course it could. But this is a terrible idea for a singly-linked node chain. The links only point in one direction: next. Consistently pushing new elements
+   onto the end of the list require traversing this chain from start to end each time.
+7. A LinkedStack could be implemented using a doubly-linked list. What are the advantages or disadvantages of this approach?
+   This would be overkill for a stack. The memory consumption would increase by 33% with the addition of a third pointer, yet there would be no obvious advantage
+   to the added complexity.
+8. As noted before, every Ruby value is an object, so every Ruby value has the same type (in a broad sense). What consequences does this have in implementing the
+   stack of T ADT?
+   Every Ruby object inherits from the same top-level class Object (Lisp T, Java Object). This means that a fully general stack of Objects could be constructed to
+   allow any Ruby value. Obviously more restrictive subclasses can also be used to enforce more specific stacks.
+9. Implement the ArrayStack class in Ruby.
+10. Implement the LinkedStack class in Ruby.

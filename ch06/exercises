@@ -1,0 +1,60 @@
+Review
+
+1. Which operations of the queue ADT have preconditions? Do these preconditions translate to the Queue interface?
+   dequeue() and front() require that the queue not be empty. Both preconditions must be enforced in the implementation as well. ???
+2. Why should storage be thought of as a circular rather than a linear arrangement of storage locations when implementing a queue using contiguous memory locations?
+   The contiguous memory locations for an array-based queue would be like a supermarket line that gradually recessed further and further away from the cash register
+   as customers are processed. The earlier queue positions would become empty and therefore useless unless the contents of the queue were repeatedly shifted forward
+   to fill the gaps. But this shifting operation is time consuming. Instead we envision a "floating" front of the line that moves while the customers stay put.
+3. Why is there a reference to both ends of the linked list used to store the elements of a queue?
+   The head of the list represents the front of the queue, so naturally we must keep a reference to it. It is not absolutely necessary to maintain a reference to
+   the end of the queue, but the alternative would be that we would have to locate the end each time a new item was enqueued. This is wasteful, so it is far more
+   efficient to simply keep track of where the end is at all times.
+
+Exercises
+
+1. In the contiguous storage implementation of a queue, is it possible to keep track of only the location of the front element (using a variable frontIndex ) and the
+   rear element (using a variable rearIndex ), with no count variable? If so, explain how this would work.
+   It is possible to do so and obvious under the initial conditions after the queue is created. Elements are dequeued at frontIndex (current front element) and enqueued
+   at rearIndex (next element to be added). Each index is also advanced after the corresponding operation. Initially the size of the queue is simply the difference
+   between the 2 indexes. Things get trickier, however, once the queue wraps around and the rearIndex (mod capacity) becomes less than the frontIndex. In this state, the
+   size must be computed as rearIndex + capacity - frontIndex.
+2. Suppose that an ArrayQueue is implemented so that the array is reallocated when a client attempts to enter() an element when the array is full. Assume that the
+   reallocated array is twice as large as the full array, and write Ruby code for the enter() operation that includes arranging the data where it needs to be in the
+   newly allocated array.
+   See ArrayQueue implementation:
+    def do_enqueue(obj)
+      if size == @store.size
+        resize
+      end
+
+      @store[(@front + @count) % @store.size] = obj
+      @count += 1
+    end
+
+    def resize
+      new_store = Array.new(@store.size * 2)
+      @count.times do |i|
+        new_store[i] = @store[(@front + i) % @store.size]
+      end
+
+      @store = new_store
+      @front = 0
+    end
+
+3. Write a class invariant for a LinkedQueue class whose attributes are frontPtr, rearPt , and count.
+4. Write a version of the LinkedQueue class that does not have a count attribute.
+   Smuggle count as cdr of tail node?!
+5. A circular singly linked list is a singly linked list in which the last node in the list holds a references to the first element rather than nil. It is possible to implement
+   a LinkedQueue efficiently using only a single reference into a circular singly linked list rather than two references into a (non-circular) singly linked list as we
+   did in the text. Explain how this works and write Ruby code for the enter() and leave() operations to illustrate this technique.
+   The obvious view of such a circular linked list is analogous to the view of the contiguous implementation: There are a fixed number of linked nodes, some of which may be empty,
+   and the front and rear of the queue "float" around the circle as elements enter and leave the queue. Such a queue can become full just as the contiguous version can.
+   An alternative view is a constantly dynamic queue similar to the conventional (non-circular) linked queue. The queue always contains only those nodes currently needed to
+   hold the contents at a given time. Thus, a single reference to a node could be maintained such that for a non-empty queue, the car of the node points to the _last_ element
+   enqueued, and the cdr points to the front of the queue. Enqueuing a new item would link in a new node which would then point to the front. As items were dequeued, this pointer
+   would advance to the cdr of the current front. Eventually a single-element queue would be reached where the cdr pointed to the node itself. Removing this last element would
+   require setting the queue index to nil. An empty queue would thus not point to a node object.
+6. A LinkedQueue could be implemented using a doubly-linked list. What are the advantages or disadvantages of this approach?
+   There are no obvious advantages for implementing a queue by means of a doubly-linked list. There is no need to traverse the linked structure in both directions.
+   Furthermore, a doubly-linked list consumes 50% more memory needlessly in order to store a 2nd node pointer.

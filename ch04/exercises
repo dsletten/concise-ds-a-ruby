@@ -1,0 +1,50 @@
+Review
+
+1. Name and define in your own words three kinds of assertions.
+   - Precondition - A necessary state prior to the execution of an operation.
+   - Post condition - A state that must hold upon completion of an operation.
+   - Class invariant - A constraint on the state of any instance of a class that must always hold except perhaps briefly during execution of an operation.
+2. What is an axiom?
+   A fundamental (self-evident) fact that is assumed to be true in some system.
+3. How can programmers check preconditions of an operation in a language that does not support assertions?
+   Without language support, the programmer must be disciplined to enforce assertions. This can involve carefully documenting expectations (before and after) a method executes
+   or conditions that must never be violated concerning the state of an instance. Code can be added to explicitly check that the assertions are met and throw an exception when they are violated.
+4. Should a program attempt to catch assertion exceptions?
+   When it is feasible to recover from a violation they should be caught.
+5. Can assertion checking be turned off easily in Ruby programs as it can in Eiffel or D programs?
+   In Eiffel and D, it is part of the design of these languages to allow easy removal of potentially onerous runtime checks once software has been sufficiently tested for release.
+   However, in Ruby, since the programmer must explicitly add (regular) code it is harder to disable such code conditionally.
+
+Exercises
+
+1. Consider the Integer ADT with the method set { +, -, *, /, %, == }. Write preconditions for those methods that need them, post conditions for all methods, and at least four axioms.
+   + @post: @result is an Integer
+   - @post: @result is an Integer
+   * @post: @result is an Integer
+   / @pre: divisor is not 0, @post: @result is an Integer (floor m n)
+   % @pre: divisor is not 0, @post: @result is an Integer in [0, n)
+   == @post: @result is true if both operands are the same Integer, false otherwise.
+
+   Axioms: n + 0 == n, m + n == n + m, n * 1 == n, m * n == n * m, m - n == -(n - m)
+   
+2. Consider the Real ADT with the method set { +, -, *, /, n √x, xⁿ }, where x is a real number and n is an integer. Write preconditions for those methods that need
+   them, post conditions for all methods, and at least four axioms.
+   + @post: @result is a Real
+   - @post: @result is a Real
+   * @post: @result is a Real
+   / @pre: divisor is not 0, @post: @result is a Real (Actually division by 0.0 is allowed, and @result is not a Real!)
+   n √x @pre: If n is even, then x ≥ 0, @post: @result is a Real
+              (Actually negative even roots are sometimes allowed, @result is not a Real!
+              Math.sqrt(-8) => Math::DomainError (Numerical argument is out of domain - "sqrt")
+              (-8)**(1/2.0) => (0.0+2.8284271247461903i) )
+   xⁿ @post: @result is a Real
+   (All of these operations may result in overflow/underflow)
+
+   Axioms: x + 0 == x, x * 1 == x, (Possibly not: x + y == y + x, x * y == y * x)
+Use the code fragment on the next page to answer the following questions.
+3. Write a class invariant comment for the Storage class.
+4. Write precondition comments and Ruby code for all the methods that need them in the Storage class. The precondition code may use other methods in the class.
+5. Write post condition comments for all methods that need them in the Storage class. The post condition comments may use other methods in the class.
+6. Implement the methods in the Storage class in Ruby. This class keeps track of the lockers in a storage facility at an airport. Lockers have numbers that range from 0 to 137.
+   The Boolean array keeps track of whether a locker is rented.
+
