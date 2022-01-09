@@ -148,6 +148,43 @@ module Collections
       _index(node, obj, 0)
     end
 
+    def splice_before(obj)
+      copy = Node.new(@first, @rest)
+      @first = obj
+      @rest = copy
+    end
+    
+    def splice_after(obj)
+      tail = Node.new(obj, @rest)
+      @rest = tail
+    end
+
+    def excise_node
+      doomed = @first
+      saved = @rest
+
+      if saved.nil?
+        raise StandardError.new("Target node must have non-nil next node")
+      else
+        @first = saved.first
+        @rest = saved.rest
+      end
+
+      doomed
+    end
+
+    def excise_child
+      child = @rest
+      
+      if child.nil?
+        raise StandardError.new("Parent must have child node")
+      else
+        @rest = child.rest
+      end
+
+      child.first
+    end
+
     private
     def self._index(node, obj, i)
       if node.nil?

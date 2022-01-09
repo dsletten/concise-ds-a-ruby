@@ -1,5 +1,3 @@
-#!/snap/bin/ruby -w
-
 #    File:
 #       list.rb
 #
@@ -11,6 +9,12 @@
 #       ------ -----------------------------------------
 #       211113 Original.
 
+#
+#    TODO:
+#    -DoublyLinkedListListIterator
+#    -PersistentList/Iterator/ListIterator
+#    -SinglyLinkedListX
+#    -Tests!!
 #
 #    No distinction between type of list and type of `fill_elt`??? Compare Lisp...
 #    
@@ -475,101 +479,101 @@ module Collections
     end
   end
 
-  class ArrayListX < MutableList
-    def initialize(type=Object, fill_elt=nil)
-      super(type, fill_elt)
-      @store = []
-      @offset = 0
-    end
+  # class ArrayListX < MutableList
+  #   def initialize(type=Object, fill_elt=nil)
+  #     super(type, fill_elt)
+  #     @store = []
+  #     @offset = 0
+  #   end
 
-    def size
-      @store.size - @offset
-    end
+  #   def size
+  #     @store.size - @offset
+  #   end
 
-    def empty?
-      size.zero?
-    end
+  #   def empty?
+  #     size.zero?
+  #   end
 
-    def iterator
-      RandomAccessListIterator.new(self)
-    end
+  #   def iterator
+  #     RandomAccessListIterator.new(self)
+  #   end
     
-    def list_iterator(start=0)
-      RandomAccessListListIterator.new(self, start)
-    end
+  #   def list_iterator(start=0)
+  #     RandomAccessListListIterator.new(self, start)
+  #   end
     
-    private
-    def do_clear
-      @store = []
-      @offset = 0
-    end
+  #   private
+  #   def do_clear
+  #     @store = []
+  #     @offset = 0
+  #   end
 
-    def do_contains?(obj)
-      @store[@offest..-1].include?(obj) # ???????
-    end
+  #   def do_contains?(obj)
+  #     @store[@offest..-1].include?(obj) # ???????
+  #   end
 
-    def do_do_add(*objs)
-      @store += objs
-    end
+  #   def do_do_add(*objs)
+  #     @store += objs
+  #   end
 
-    def do_do_insert(i, obj)
-      j = i + @offset
+  #   def do_do_insert(i, obj)
+  #     j = i + @offset
 
-      if @offset.zero?  ||  size/2 > i
-        @store.insert(j, obj)
-      else
-        @offset -= 1
-        @store[@offset..j] = @store[@offset+1...j] # collapses element???
-        @store[i+@offset] = obj
-      end
-    end
+  #     if @offset.zero?  ||  size/2 > i
+  #       @store.insert(j, obj)
+  #     else
+  #       @offset -= 1
+  #       @store[@offset..j] = @store[@offset+1...j] # collapses element???
+  #       @store[i+@offset] = obj
+  #     end
+  #   end
     
-    def do_do_delete(i)
-      j = i + @offset
-      doomed = @store[j]
+  #   def do_do_delete(i)
+  #     j = i + @offset
+  #     doomed = @store[j]
 
-      if i <= size/2
-        @store[@offset+1..j] = @store[@offset...j] # collapses element???
-        @store[@offset] = fill_elt
-        @offset += 1
-      else
-        @store.delete_at(i)
-      end
+  #     if i <= size/2
+  #       @store[@offset+1..j] = @store[@offset...j] # collapses element???
+  #       @store[@offset] = fill_elt
+  #       @offset += 1
+  #     else
+  #       @store.delete_at(i)
+  #     end
 
-      doomed
-    end
+  #     doomed
+  #   end
     
-    def do_get(i)
-      @store[i+@offset]
-    end
+  #   def do_get(i)
+  #     @store[i+@offset]
+  #   end
 
-    def do_set(i, obj)
-      @store[i+@offset] = obj
-    end
+  #   def do_set(i, obj)
+  #     @store[i+@offset] = obj
+  #   end
     
-    def do_index(obj)
-      pos = @store.index(obj)
-      if pos.nil?
-        pos
-      else
-        pos + @offset
-      end
-    end
+  #   def do_index(obj)
+  #     pos = @store.index(obj)
+  #     if pos.nil?
+  #       pos
+  #     else
+  #       pos + @offset
+  #     end
+  #   end
 
-    #
-    #    Returns empty ArrayList if negative i is too far
-    #    vs. Array#slice => nil
-    #    
-    def do_slice(i, n)
-      list = ArrayList.new(type, fill_elt)
-      list.add(*(@store[i+@offset, n])) # Compare Common Lisp version to calculate what to add!
-      list
-    end
-  end
+  #   #
+  #   #    Returns empty ArrayList if negative i is too far
+  #   #    vs. Array#slice => nil
+  #   #    
+  #   def do_slice(i, n)
+  #     list = ArrayList.new(type, fill_elt)
+  #     list.add(*(@store[i+@offset, n])) # Compare Common Lisp version to calculate what to add!
+  #     list
+  #   end
+  # end
 
   class RandomAccessListIterator < MutableCollectionIterator
-    def initialize(list)
-      super(list)
+    def initialize(collection)
+      super(collection)
       @cursor = 0
     end
 
@@ -638,94 +642,50 @@ module Collections
       @count += objs.size
     end
 
-    # def do_insert(i, obj)
-    #   if i.zero?
-    #     @store = Node.new(obj, @store)
-    #   else
-    #     head = Node.nthcdr(@store, i - 1)
-    #     head.rest = Node.new(obj, head.rest)
-    #   end
-      
-    #   @count += 1
-    # end
-
     def do_do_insert(i, obj)
-      do_insert_before(Node.nthcdr(@store, i), obj)
-    end
-
-    def do_insert_before(node, obj)
-      copy = Node.new(node.first, node.rest)
-      node.first = obj
-      node.rest = copy
-
-      count_modification
+      Node.nthcdr(@store, i).splice_before(obj)
       @count += 1
     end
 
-    def do_insert_after(node, obj)
-      tail = Node.new(obj, node.rest)
-      node.rest = tail
-
-      count_modification
+    def do_do_insert_before(node, obj)
+      node.splice_before(obj)
       @count += 1
     end
 
-    # def do_delete(i)
-    #   if i.zero?
-    #     doomed = @store.first
-    #     @store = @store.rest
-    #     @count -= 1
-    #     doomed
-    #   else
-    #     head = Node.nthcdr(@store, i - 1)
-    #     doomed = head.rest.first
-    #     head.rest = head.rest.rest
-    #     @count -= 1
-    #     doomed
-    #   end
-    # end
+    def do_do_insert_after(node, obj)
+      node.splice_after(obj)
+      @count += 1
+    end
 
     def do_do_delete(i)
       if i.zero?
-        delete_node(@store)
+        result = @store.first
+        @store = @store.rest
       else
-        delete_child(Node.nthcdr(@store, i - 1))
+        result = Node.nthcdr(@store, i - 1).excise_child
       end
-    end
-
-    def do_delete_node(doomed)
-      content = doomed.first
-      saved = doomed.rest
-
-      if doomed == @store
-        @store = saved
-      elsif saved.nil?
-        raise StandardError.new("Current node must have non-nil next node")
-      else
-        doomed.first = saved.first
-        doomed.rest = saved.rest
-      end
-
-      count_modification
+      
       @count -= 1
-
-      content
+      result
     end
 
-    def do_delete_child(parent)
-      child = parent.rest
-
-      if child.nil?
-        raise StandardError.new("Parent must have child node")
+    def do_do_delete_node(doomed)
+      if doomed == @store
+        result = @store.first
+        @store = @store.rest
       else
-        result = child.first
-        parent.rest = child.rest
-
-        count_modification
-        @count -= 1
-
-        result
+        result = doomed.excise_node
       end
+
+      @count -= 1
+      result
+    end
+
+    def do_do_delete_child(parent)
+      result = parent.excise_child
+      
+      @count -= 1
+      result
     end
 
     def do_get(i)
@@ -756,8 +716,8 @@ module Collections
   end    
 
   class SinglyLinkedListIterator < MutableCollectionIterator
-    def initialize(list)
-      super(list)
+    def initialize(collection)
+      super(collection)
       @cursor = @collection.store
     end
 
@@ -782,9 +742,70 @@ module Collections
       @content = content
     end
 
-    def self.link(pred, succ)
-      pred.succ = succ
-      succ.pred = pred
+    def to_s
+      "<#{print_pred}#{@content}#{print_succ}>"
+    end
+
+    def link(succ)
+      @succ = succ
+      succ.pred = self
+    end
+    
+    def splice_before(obj)
+      new_dcons = Dcons.new(obj)
+      self.pred.link(new_dcons)
+      new_dcons.link(self)
+    end
+    
+    def splice_after(obj)
+      new_dcons = Dcons.new(obj)
+      new_dcons.link(self.succ)
+      self.link(new_dcons)
+    end
+
+    def excise_node
+      saved = @succ
+
+      if self == saved
+        raise StandardError.new("Cannot delete sole node.")
+      else
+        self.pred.link(self.succ)
+      end
+
+      @content
+    end
+
+    def excise_child
+      child = @succ
+
+      if self == child
+        raise StandardError.new("Parent must have child node")
+      else
+        self.link(child.succ)
+      end
+
+      child.content
+    end
+
+    private
+    def print_pred
+      if @pred.nil?
+        "∅ ← "
+      elsif self == @pred
+        "↻ "
+      else
+        "#{@pred.content} ← "
+      end
+    end
+
+    def print_succ
+      if @succ.nil?
+        " → ∅"
+      elsif self == @pred
+        " ↺"
+      else
+        " → #{@succ.content}"
+      end
     end
   end
 
@@ -794,14 +815,8 @@ module Collections
 
     def initialize(list)
       @list = list
-      @node = nil
+      @node = @list.store # Always empty at this point???
       @index = 0
-
-      if @list.empty?
-        @node = nil
-      else
-        @node = @list.store
-      end
     end
 
     def initialized?
@@ -809,20 +824,16 @@ module Collections
     end
 
     def start?
-      @index.zero?
+      !initialized?  ||  @index.zero?
     end
 
     def end?
-      @index == @list.size - 1
+      !initialized?  ||  @index == @list.size - 1
     end
 
     def reset
       @index = 0
-      if @list.empty?
-        @node = nil
-      else
-        @node = @list.store
-      end
+      @node = @list.store
     end
       
     def advance(step=1)
@@ -960,7 +971,7 @@ module Collections
     def do_contains?(obj)
       dcons = @store
       @count.times do
-        return true if dcons.content == obj
+        return dcons.content if dcons.content == obj
         dcons = dcons.succ
       end
 
@@ -974,7 +985,7 @@ module Collections
         @store = dcons
       else
         tail = @store.pred
-        Dcons.link(tail, dcons)
+        tail.link(dcons)
       end
       
       add_nodes(@store, dcons, elts)
@@ -986,11 +997,11 @@ module Collections
       dcons = start
       i = 1
       elts.each do |elt|
-        Dcons.link(dcons, Dcons.new(elt))
+        dcons.link(Dcons.new(elt))
         dcons = dcons.succ
         i += 1
       end
-      Dcons.link(dcons, head)
+      dcons.link(head)
       @count += i
     end
 
@@ -1003,22 +1014,10 @@ module Collections
     end
 
     def do_do_insert(i, obj)
-      new_dcons = Dcons.new(obj)
+      nth_dcons(i).splice_before(obj)
 
       if i.zero?
-        if empty?
-          Dcons.link(new_dcons, new_dcons)
-        else
-          Dcons.link(@store.pred, new_dcons)
-          Dcons.link(new_dcons, @store)
-        end
-
-        @store = new_dcons
-      else
-        dcons = nth_dcons(i)
-
-        Dcons.link(dcons.pred, new_dcons)
-        Dcons.link(new_dcons, dcons)
+        @store = @store.pred
       end
 
       @count += 1
@@ -1029,34 +1028,72 @@ module Collections
         @cursor.reset
       end
     end
+
+    def do_do_insert_before(node, obj)
+      node.splice_before(obj)
+
+      if node == @store
+        @store = @store.pred
+      end
+      
+      @count += 1
+      @cursor.index += 1
+    end
+
+    def do_do_insert_after(node, obj)
+      node.splice_after(obj)
+      @count += 1
+    end
     
     def do_do_delete(i)
-      if i.zero?
-        doomed = @store.content
+      doomed = delete_dcons(nth_dcons(i))
 
-        if @store == @store.succ
-          @store = nil
-        else
-          new_store = @store.succ
-          Dcons.link(@store.pred, new_store)
-          @store = new_store
+      @count -= 1
+      @cursor.reset
+      
+      doomed
+    end
+
+    def do_do_delete_node(doomed)
+      result = delete_dcons(doomed)
+
+      @count -= 1
+      @cursor.reset
+      
+      result
+    end
+
+    #
+    #    This is not really needed for DoublyLinkedList.
+    #    
+    def do_do_delete_child(parent)
+      child = parent.succ
+
+      if child == @store
+        raise StandardError.new("Parent must have child node")
+      else
+        result = parent.excise_child
+
+        @count -= 1
+        @cursor.reset
+      
+        result
+      end
+    end
+
+    def delete_dcons(doomed)
+      if doomed == doomed.succ
+        doomed.succ = nil # Release for GC
+        @store = nil
+        doomed.content
+      else
+        result = doomed.excise_node
+        if doomed == @store
+          @store = doomed.succ
         end
 
-        @count -= 1
-
-        @cursor.reset
-        doomed
-      else
-        dcons = nth_dcons(i)
-        doomed = dcons.content
-        Dcons.link(dcons.pred, dcons.succ)
-        @count -= 1
-
-        @cursor.reset
-        doomed
+        result
       end
-
-#      @cursor.reset
     end
 
     # def do_index(obj)
@@ -1107,27 +1144,33 @@ module Collections
     end
   end
 
-  class DoublyLinkedListIterator < Iterator
-    def initialize(list)
-      @cursor = Dcursor.new(list)
+  class DoublyLinkedListIterator < MutableCollectionIterator
+    def initialize(collection)
+      super(collection)
+      @cursor = Dcursor.new(collection)
       @sealed_for_your_protection = true
     end
 
-    def done?
-      !@cursor.initialized?  ||  (!@sealed_for_your_protection && @cursor.start?)
-    end
-
-    def next
+    private
+    def do_next
       if done?
         nil
       else
         @cursor.advance
         @sealed_for_your_protection = false
+        if done?
+          nil
+        else
+          current
+        end
       end
     end
 
-    private
-    def do_current
+    def do_done?
+      !@cursor.initialized?  ||  (!@sealed_for_your_protection && @cursor.start?)
+    end
+
+    def do_do_current
       @cursor.node.content
     end
   end
@@ -1427,7 +1470,7 @@ module Collections
   end
 
   class RandomAccessListListIterator < MutableListListIterator
-    def initialize(list, start)
+    def initialize(list, start=0)
       super(list)
       raise ArgumentError.new("Invalid index: #{start}") unless (start >= 0  &&  start < [@list.size, 1].max)
       @cursor = start
@@ -1465,6 +1508,7 @@ module Collections
     def do_do_next
       if has_next?
         @cursor += 1
+        current
       else
         nil
       end
@@ -1473,6 +1517,7 @@ module Collections
     def do_do_previous
       if has_previous?
         @cursor -= 1
+        current
       else
         nil
       end
@@ -1513,7 +1558,7 @@ module Collections
   end
 
   class SinglyLinkedListListIterator < MutableListListIterator
-    def initialize(list, start)
+    def initialize(list, start=0)
       super(list)
       raise ArgumentError.new("Invalid index: #{start}") unless (start >= 0  &&  start < [@list.size, 1].max)
       @cursor = @list.store
