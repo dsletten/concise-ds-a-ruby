@@ -11,7 +11,6 @@
 
 #
 #    TODO:
-#    -DoublyLinkedListListIterator
 #    -PersistentList/Iterator/ListIterator
 #    -SinglyLinkedListX
 #    -Tests!!
@@ -852,6 +851,18 @@ module Collections
       end
     end
 
+    #
+    #    Nudge cursor to next node without advancing index.
+    #    Used when removing node.
+    #    
+    def bump
+      if initialized?
+        do_bump
+      else
+        raise StandardError.new("Cursor has not been initialized.")
+      end
+    end
+
     private
     def do_advance(step)
       raise ArgumentError.new("Step must be a positive value: #{step}") if step <= 0
@@ -871,6 +882,10 @@ module Collections
       end
 
       @index = @index % @list.size
+    end
+
+    def do_bump
+      @node = @node.succ
     end
   end
 
@@ -900,8 +915,8 @@ module Collections
       DoublyLinkedListIterator.new(self)
     end
 
-    def list_iterator
-      DoublyLinkedListListIterator.new(self)
+    def list_iterator(start=0)
+      DoublyLinkedListListIterator.new(self, start)
     end
 
 #    protected
@@ -1271,6 +1286,29 @@ module Collections
     end
   end
 
+  class PersistentList < List
+    def initialize(type=Object, fill_elt=nil)
+      super(type, fill_elt)
+      @store = store
+      @count = store.length
+    end
+    
+    def to_s
+      result = "("
+      unless empty?
+        i = iterator
+        result << i.current.to_s
+
+        i = i.next
+        until i.done?
+          result << " #{i.current.to_s}" # Invisible nil!
+          i = i.next
+        end
+      end
+      result << ")"
+    end
+  end
+  
   class ListIterator
     def type
       raise NoMethodError, "#{self.class} does not implement type()"
@@ -1530,8 +1568,8 @@ module Collections
       end
 
       result = @list.delete(index)
-      count_modification
 
+      count_modification
       result
     end
     
@@ -1584,32 +1622,26 @@ module Collections
     end
 
     def do_has_next?
-      initialize_cursor if @cursor.nil?
-      !@cursor.rest.nil?
+      !(@cursor.nil?  ||  @cursor.rest.nil?)
     end
 
     def do_has_previous?
-      initialize_cursor if @cursor.nil?
-      @cursor != @list.store
+      !(@cursor.nil?  ||  @cursor == @list.store)
     end
 
     def do_do_current
-      initialize_cursor if @cursor.nil?
       @cursor.first
     end
 
     def do_do_current_index
-      initialize_cursor if @cursor.nil?
       @index
     end
 
     def do_do_set_current(obj)
-      initialize_cursor if @cursor.nil?
       @cursor.first = obj
     end
 
     def do_do_next
-      initialize_cursor if @cursor.nil?
       if has_next?
         @history.push(@cursor)
         @cursor = @cursor.rest
@@ -1621,7 +1653,6 @@ module Collections
     end
 
     def do_do_previous
-      initialize_cursor if @cursor.nil?
       if has_previous?
         @cursor = @history.pop
         @index -= 1
@@ -1632,8 +1663,6 @@ module Collections
     end
 
     def do_do_remove
-      initialize_cursor if @cursor.nil?
-
       if @index.zero?
         result = @list.delete_node(@cursor)
         initialize_cursor
@@ -1673,6 +1702,104 @@ module Collections
         initialize_cursor
       else
         @list.insert_after(@cursor, obj)
+      end
+
+      count_modification
+    end
+  end
+
+  class DoublyLinkedListListIterator < MutableListListIterator
+    def initialize(list, start=0)
+      super(list)
+      raise ArgumentError.new("Invalid index: #{start}") unless (start >= 0  &&  start < [@list.size, 1].max)
+      @cursor = Dcursor.new(list)
+      @cursor.advance(start) unless start.zero?
+    end
+
+    def type
+      @list.type
+    end
+
+    def empty?
+      @list.empty?
+    end
+
+    private
+    def do_has_next?
+      !@cursor.end?
+    end
+
+    def do_has_previous?
+      !@cursor.start?
+    end
+
+    def do_do_current
+      @cursor.node.content
+    end
+
+    def do_do_current_index
+      @cursor.index
+    end
+
+    def do_do_set_current(obj)
+      @cursor.node.content = obj
+    end
+
+    def do_do_next
+      if has_next?
+        @cursor.advance
+        current
+      else
+        nil
+      end
+    end
+
+    def do_do_previous
+      if has_previous?
+        @cursor.rewind
+        current
+      else
+        nil
+      end
+    end
+
+    def do_do_remove
+      if @cursor.index.zero?
+        result = @list.delete_node(@cursor.node)
+        @cursor.reset
+      else
+        current_node = @cursor.node
+        if has_next?
+          @cursor.bump
+        else
+          @cursor.rewind
+        end
+
+        result = @list.delete_node(current_node)
+      end
+
+      count_modification
+      result
+    end
+    
+    def do_do_add_before(obj)
+      if empty?
+        @list.add(obj)
+        @cursor.reset
+      else
+        @list.insert_before(@cursor.node, obj)
+        @cursor.index += 1
+      end
+
+      count_modification
+    end
+
+    def do_do_add_after(obj)
+      if empty?
+        @list.add(obj)
+        @cursor.reset
+      else
+        @list.insert_after(@cursor.node, obj)
       end
 
       count_modification
