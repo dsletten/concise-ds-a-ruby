@@ -1,4 +1,4 @@
-#!/snap/bin/ruby -w
+#!/usr/bin/ruby -w
 
 #    File:
 #       test_list.rb

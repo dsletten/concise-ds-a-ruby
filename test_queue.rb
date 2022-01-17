@@ -1,4 +1,4 @@
-#!/snap/bin/ruby -w
+#!/usr/bin/ruby -w
 
 #    File:
 #       test_queue.rb
@@ -12,6 +12,7 @@
 #       210322 Original.
 
 require './containers'
+require './queue'
 require 'test/unit'
 
 class TestQueue < Test::Unit::TestCase

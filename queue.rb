@@ -10,6 +10,11 @@
 #        Date             Change Description
 #       ------ -----------------------------------------
 #       211113 Original.
+#
+#
+#    RingBuffer and RecyclingQueue are kind of pointless.
+#    (CircularQueue is also just trivially different from LinkedQueue).
+#    
 
 module Collections
   class Queue < Dispenser
@@ -48,6 +53,7 @@ module Collections
 
   #
   #    Prosaic array. Assumed to be fixed-length -> manual resize. Queue "wraps around" as long as there is space.
+  #    This is traditional `ring buffer`
   #    
   class ArrayQueue < Queue
     ARRAY_QUEUE_CAPACITY = 20
@@ -166,21 +172,24 @@ module Collections
     
     private
     def do_enqueue(obj)
+      node = Node.new(obj, nil)
       if @front.nil?
         raise StandardError.new("Queue is in illegal state.") unless @rear.nil?
-        @rear = @front = Node.new(obj, nil)
+        @rear = @front = node
       else
-        @rear = @rear.rest = Node.new(obj, nil)
+        @rear = @rear.rest = node
       end
       @count += 1
     end
 
     def do_dequeue
       discard = front
+
       @front = @front.rest
       if @front.nil?
         @rear = @front
       end
+
       @count -= 1
       discard
     end
@@ -235,6 +244,7 @@ module Collections
       else
         @index.rest = @index.rest.rest
       end
+
       @count -= 1
       discard
     end

@@ -165,13 +165,6 @@ module Collections
     end
     
     protected
-    def create_stack(type, top, count)
-      stack = PersistentStack.new(type)
-      stack.top = top
-      stack.count = count
-      stack
-    end
-    
     def top=(node)
       @top = node
     end
@@ -181,6 +174,13 @@ module Collections
     end
 
     private
+    def create_stack(type, top, count)
+      stack = PersistentStack.new(type)
+      stack.top = top
+      stack.count = count
+      stack
+    end
+    
     def do_push(obj)
       create_stack(@type, Node.new(obj, @top), @count + 1)
     end
