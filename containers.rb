@@ -136,9 +136,9 @@ module Collections
 
     def self.include?(node, obj)
       if node.nil?
-        false
+        nil
       elsif node.first == obj
-        true
+        node.first
       else
         include?(node.rest, obj)
       end

@@ -1,3 +1,4 @@
+# coding: utf-8
 #    File:
 #       list.rb
 #
@@ -12,7 +13,6 @@
 #
 #    TODO:
 #    -PersistentList/Iterator/ListIterator
-#    -SinglyLinkedListX
 #    -Tests!!
 #
 #    No distinction between type of list and type of `fill_elt`??? Compare Lisp...
@@ -420,7 +420,11 @@ module Collections
     end
 
     def do_contains?(obj)
-      @store.include?(obj)
+      if @store.include?(obj)
+        obj
+      else
+        nil
+      end
     end
 
     def do_do_add(*objs)
@@ -714,10 +718,164 @@ module Collections
     end
   end    
 
+  class SinglyLinkedListX < MutableLinkedList
+    attr_reader :front
+
+    def initialize(type=Object, fill_elt=nil)
+      super(type, fill_elt)
+      @front = nil
+      @rear = nil
+      @count = 0
+    end
+    
+    def size
+      @count
+    end
+
+    def empty?
+      @front.nil?
+    end
+
+    def iterator
+      SinglyLinkedListIterator.new(self)
+    end
+    
+    def list_iterator(start=0)
+      SinglyLinkedListListIterator.new(self, start)
+    end
+
+    private
+    def do_clear
+      @front = nil
+      @rear = nil
+      @count = 0
+    end
+
+    def do_contains?(obj)
+      Node.include?(@front, obj)
+    end
+
+    def do_do_add(*objs)
+      if self.empty?
+        elt, *elts = objs
+        @rear = @front = Node.new(elt, nil)
+        @count += 1
+        add_nodes(elts)
+      else
+        add_nodes(objs)
+      end
+    end
+
+    def add_nodes(objs)
+      objs.each do |obj|
+        @rear = @rear.rest = Node.new(obj, nil)
+      end
+
+      @count += objs.size
+    end
+
+    def do_do_insert(i, obj)
+      node = Node.nthcdr(@front, i)
+      node.splice_before(obj)
+
+      @rear = @rear.rest if node == @rear
+      
+      @count += 1
+    end
+
+    def do_do_insert_before(node, obj)
+      node.splice_before(obj)
+
+      @rear = @rear.rest if node == @rear
+      
+      @count += 1
+    end
+
+    def do_do_insert_after(node, obj)
+      node.splice_after(obj)
+
+      @rear = @rear.rest if node == @rear
+      
+      @count += 1
+    end
+
+    def do_do_delete(i)
+      if i.zero?
+        result = @front.first
+        @front = @front.rest
+        
+        @rear = nil if @front.nil?
+      else
+        parent = Node.nthcdr(@front, i - 1)
+        result = parent.excise_child
+
+        @rear = parent if parent.rest.nil?
+      end
+      
+      @count -= 1
+      result
+    end
+
+    def do_do_delete_node(doomed)
+      if doomed == @front
+        result = @front.first
+        @front = @front.rest
+        
+        @rear = nil if @front.nil?
+      else
+        result = doomed.excise_node
+
+        @rear = doomed if doomed.rest.nil?
+      end
+
+      @count -= 1
+      result
+    end
+
+    def do_do_delete_child(parent)
+      result = parent.excise_child
+      
+      @rear = parent if parent.rest.nil?
+
+      @count -= 1
+      result
+    end
+
+    def do_get(i)
+      Node.nth(@front, i)
+    end
+
+    def do_set(i, obj)
+      Node.set_nth(@front, i, obj)
+    end
+
+    def do_index(obj)
+      Node.index(@front, obj)
+    end
+
+    #
+    #    Returns empty SinglyLinkedListX if negative i is too far
+    #    vs. Array#slice => nil
+    #    
+    def do_slice(i, n)
+      list = SinglyLinkedListX.new(type, fill_elt)
+      start = [i, @count].min
+      m = [i+n, @count].min - start
+      slice = Node.slice(@front, start, m)
+
+      list.add(*slice)
+      list
+    end
+  end    
+
   class SinglyLinkedListIterator < MutableCollectionIterator
     def initialize(collection)
       super(collection)
-      @cursor = @collection.store
+      if collection.is_a?(SinglyLinkedList)
+        @cursor = @collection.store
+      else
+        @cursor = @collection.front
+      end
     end
 
     private
@@ -763,12 +921,10 @@ module Collections
     end
 
     def excise_node
-      saved = @succ
-
-      if self == saved
+      if self == @succ
         raise StandardError.new("Cannot delete sole node.")
       else
-        self.pred.link(self.succ)
+        @pred.link(@succ)
       end
 
       @content
@@ -800,7 +956,7 @@ module Collections
     def print_succ
       if @succ.nil?
         " → ∅"
-      elsif self == @pred
+      elsif self == @succ
         " ↺"
       else
         " → #{@succ.content}"
@@ -990,7 +1146,7 @@ module Collections
         dcons = dcons.succ
       end
 
-      return false
+      return nil
     end
 
     def do_do_add(*objs)
@@ -1220,11 +1376,11 @@ module Collections
     def do_contains?(obj)
       size.times do |i|
         if @store[i] == obj
-          return true
+          return @store[i]
         end
       end
 
-      return false
+      return nil
     end
 
     def do_do_add(*objs)
