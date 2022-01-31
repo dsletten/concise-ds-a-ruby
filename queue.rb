@@ -388,8 +388,8 @@ module Collections
     end
     
     protected
-    def create_queue(type, front, rear, count)
-      queue = PersistentQueue.new(type)
+    def create_queue(front, rear, count)
+      queue = PersistentQueue.new(@type)
       queue.front = front
       queue.rear = rear
       queue.count = count
@@ -415,17 +415,17 @@ module Collections
     private
     def do_enqueue(obj)
       if empty?
-        create_queue(@type, Node.new(obj, @front), nil, 1)
+        create_queue(Node.new(obj, @front), nil, 1)
       else
-        create_queue(@type, @front, Node.new(obj, @rear), @count + 1)
+        create_queue(@front, Node.new(obj, @rear), @count + 1)
       end
     end
 
     def do_dequeue
       if @front.rest.nil?
-        create_queue(@type, reverse(@rear), nil, @count - 1)
+        create_queue(reverse(@rear), nil, @count - 1)
       else
-        create_queue(@type, @front.rest, @rear, @count - 1)
+        create_queue(@front.rest, @rear, @count - 1)
       end
     end
 

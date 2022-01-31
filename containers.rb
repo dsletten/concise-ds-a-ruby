@@ -134,18 +134,27 @@ module Collections
       result
     end
 
-    def self.include?(node, obj)
+    def self.include?(node, obj, test: ->(x, y) {x == y})
       if node.nil?
         nil
-      elsif node.first == obj
+#      elsif node.first == obj
+      elsif test.call(obj, node.first)
         node.first
       else
-        include?(node.rest, obj)
+        include?(node.rest, obj, test: test)
       end
     end
 
-    def self.index(node, obj)
-      _index(node, obj, 0)
+    def self.index(node, obj, test: ->(x, y) {x == y})
+      _index(node, obj, 0, test)
+    end
+
+    def self.append(l1, l2)
+      if l1.nil?
+        l2
+      else
+        Node.new(l1.first, append(l1.rest, l2))
+      end
     end
 
     def splice_before(obj)
@@ -186,13 +195,13 @@ module Collections
     end
 
     private
-    def self._index(node, obj, i)
+    def self._index(node, obj, i, test)
       if node.nil?
         nil
-      elsif node.first == obj
+      elsif test.call(obj, node.first)
         i
       else
-        _index(node.rest, obj, i+1)
+        _index(node.rest, obj, i+1, test)
       end
     end
   end
@@ -202,12 +211,12 @@ module Collections
       raise NoMethodError, "#{self.class} does not implement iterator()"
     end
 
-    def contains?(obj) # test? 
+    def contains?(obj, test: ->(x, y) {x == y})
       raise ArgumentError.new("#{obj} is not of type #{type}") unless obj.is_a?(type)
-      do_contains?(obj)
+      do_contains?(obj, test)
     end
 
-    def ==(collection) #test?
+    def ==(collection, test)
       raise NoMethodError, "#{self.class} does not implement =="
     end
 
@@ -216,7 +225,7 @@ module Collections
     end
 
     private
-    def do_contains?(obj) # test? 
+    def do_contains?(obj, test) 
       raise NoMethodError, "#{self.class} does not implement do_contains?()"
     end
   end

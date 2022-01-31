@@ -44,14 +44,13 @@ module Collections
 
 # PersistentList !!!
 #    def equals(l)
-    def ==(list)
-#      if list.is_a?(ArrayList)  &&  list.size == self.size
+    def ==(list, test: ->(x, y) {x == y})
       if list.size == self.size
         i1 = self.iterator
         i2 = list.iterator
 
         until i1.done?  &&  i2.done?
-          return false unless i1.current == i2.current
+          return false unless test.call(i1.current, i2.current)
           i1.next
           i2.next
         end
@@ -84,7 +83,7 @@ module Collections
     def add(*objs)
       raise ArgumentError.new("Type mismatch with objs") unless objs.all? {|obj| obj.is_a?(type)}
 
-      do_add(*objs) unless objs.empty?
+      do_add(objs)
     end
 
     def insert(i, obj)
@@ -146,9 +145,9 @@ module Collections
       end
     end
     
-    def index(obj)
+    def index(obj, test: ->(x, y) {x == y})
       raise ArgumentError.new("#{obj} is not of type #{type}") unless obj.is_a?(type)
-      do_index(obj)
+      do_index(obj, test)
     end
     
     def slice(i, n)
@@ -167,7 +166,7 @@ module Collections
     end
 
     private
-    def do_add(obj)
+    def do_add(objs)
       raise NoMethodError, "#{self.class} does not implement do_add()"
     end
 
@@ -192,7 +191,7 @@ module Collections
       raise NoMethodError, "#{self.class} does not implement do_set()"
     end
 
-    def do_index(obj)
+    def do_index(obj, test)
       raise NoMethodError, "#{self.class} does not implement do_index()"
     end
 
@@ -223,9 +222,11 @@ module Collections
       raise NoMethodError, "#{self.class} does not implement do_clear()"
     end
 
-    def do_add(*objs)
-      count_modification
-      do_do_add(*objs)
+    def do_add(objs)
+      unless objs.empty?
+        count_modification
+        do_do_add(objs)
+      end
     end
 
     def do_insert(i, obj)
@@ -238,7 +239,7 @@ module Collections
       do_do_delete(i)
     end
 
-    def do_do_add(obj)
+    def do_do_add(objs)
       raise NoMethodError, "#{self.class} does not implement do_do_add()"
     end
 
@@ -328,9 +329,11 @@ module Collections
       raise NoMethodError, "#{self.class} does not implement do_clear()"
     end
 
-    def do_add(*objs)
-      count_modification
-      do_do_add(*objs)
+    def do_add(objs)
+      unless objs.empty?
+        count_modification
+        do_do_add(objs)
+      end
     end
 
     def do_insert(i, obj)
@@ -363,7 +366,7 @@ module Collections
       do_do_delete_child(parent)
     end
 
-    def do_do_add(obj)
+    def do_do_add(objs)
       raise NoMethodError, "#{self.class} does not implement do_do_add()"
     end
 
@@ -419,15 +422,11 @@ module Collections
       @store = []
     end
 
-    def do_contains?(obj)
-      if @store.include?(obj)
-        obj
-      else
-        nil
-      end
+    def do_contains?(obj, test)
+      @store.find(&->(elt) {test.call(obj, elt)})
     end
 
-    def do_do_add(*objs)
+    def do_do_add(objs)
       @store += objs
     end
 
@@ -467,8 +466,8 @@ module Collections
       @store[i] = obj
     end
     
-    def do_index(obj)
-      @store.index(obj)
+    def do_index(obj, test)
+      @store.find_index(&->(elt) {test.call(obj, elt)})
     end
 
     #
@@ -626,11 +625,11 @@ module Collections
       @count = 0
     end
 
-    def do_contains?(obj)
-      Node.include?(@store, obj)
+    def do_contains?(obj, test)
+      Node.include?(@store, obj, test: test)
     end
 
-    def do_do_add(*objs)
+    def do_do_add(objs)
       node = nil
       objs.reverse_each do |elt|
         node = Node.new(elt, node)
@@ -699,8 +698,8 @@ module Collections
       Node.set_nth(@store, i, obj)
     end
 
-    def do_index(obj)
-      Node.index(@store, obj)
+    def do_index(obj, test)
+      Node.index(@store, obj, test: test)
     end
 
     #
@@ -751,11 +750,11 @@ module Collections
       @count = 0
     end
 
-    def do_contains?(obj)
-      Node.include?(@front, obj)
+    def do_contains?(obj, test)
+      Node.include?(@front, obj, test: test)
     end
 
-    def do_do_add(*objs)
+    def do_do_add(objs)
       if self.empty?
         elt, *elts = objs
         @rear = @front = Node.new(elt, nil)
@@ -849,8 +848,8 @@ module Collections
       Node.set_nth(@front, i, obj)
     end
 
-    def do_index(obj)
-      Node.index(@front, obj)
+    def do_index(obj, test)
+      Node.index(@store, obj, test: test)
     end
 
     #
@@ -1139,17 +1138,17 @@ module Collections
     #   return false
     # end
 
-    def do_contains?(obj)
+    def do_contains?(obj, test)
       dcons = @store
       @count.times do
-        return dcons.content if dcons.content == obj
+        return dcons.content if test.call(obj, dcons.content)
         dcons = dcons.succ
       end
 
       return nil
     end
 
-    def do_do_add(*objs)
+    def do_do_add(objs)
       elt, *elts = objs
       dcons = Dcons.new(elt)
       if empty?
@@ -1275,10 +1274,10 @@ module Collections
     #   return nil
     # end
 
-    def do_index(obj)
+    def do_index(obj, test)
       dcons = @store
       @count.times do |i|
-        return i if dcons.content == obj
+        return i if test.call(obj, dcons.content)
         dcons = dcons.succ
       end
 
@@ -1373,9 +1372,9 @@ module Collections
       @store = {}
     end
 
-    def do_contains?(obj)
+    def do_contains?(obj, test)
       size.times do |i|
-        if @store[i] == obj
+        if test.call(obj, @store[i])
           return @store[i]
         end
       end
@@ -1383,7 +1382,7 @@ module Collections
       return nil
     end
 
-    def do_do_add(*objs)
+    def do_do_add(objs)
       i = size
       objs.each do |obj|
         @store[i] = obj
@@ -1416,9 +1415,9 @@ module Collections
       @store[i] = obj
     end
     
-    def do_index(obj)
+    def do_index(obj, test)
       size.times do |i|
-        if @store[i] == obj
+        if test.call(obj, @store[i])
           return i
         end
       end
@@ -1445,8 +1444,8 @@ module Collections
   class PersistentList < List
     def initialize(type=Object, fill_elt=nil)
       super(type, fill_elt)
-      @store = store
-      @count = store.length
+      @store = nil
+      @count = 0
     end
     
     def to_s
@@ -1462,6 +1461,124 @@ module Collections
         end
       end
       result << ")"
+    end
+
+    def size
+      @count
+    end
+
+    def empty?
+      @store.nil?
+    end
+
+    def clear
+      PersistentList.new(@type, @fill_elt)
+    end
+
+    def delete(i)
+      raise StandardError.new("List is empty.") if empty?
+
+      if i >= @count 
+        self
+      elsif i < -@count
+        self
+      else
+        super
+      end
+    end
+
+    protected
+    def store=(obj)
+      @store = obj
+    end
+
+    def count=(n)
+      @count = n
+    end
+
+    private
+    def initialize_list(store, count)
+      list = PersistentList.new(@type, @fill_elt)
+      list.store = store
+      list.count = count
+      list
+    end
+    
+    def do_contains?(obj, test)
+      Node.include?(@store, obj, test: test)
+    end
+
+    def do_add(objs)
+      if objs.empty?
+        self
+      else
+        node = nil
+        objs.reverse_each do |elt|
+          node = Node.new(elt, node)
+        end
+
+        initialize_list(Node.append(@store, node), @count + objs.size)
+      end
+    end
+
+    def do_insert(i, obj)
+      front = nil
+      rear = nil
+      node = @store
+
+      i.times do |j|
+        new_node = Node.new(node.first, nil)
+
+        if front.nil?
+          rear = front = new_node
+        else
+          rear = rear.rest = new_node
+        end
+
+        node = node.rest
+      end
+
+      tail = Node.new(obj, node)
+
+      if front.nil?
+        front = tail
+      else
+        rear.rest = tail
+      end
+
+      initialize_list(front, @count + 1)
+    end
+
+    def do_delete(i)
+      front = nil
+      rear = nil
+      node = @store
+
+      i.times do |j|
+        new_node = Node.new(node.first, nil)
+
+        if front.nil?
+          rear = front = new_node
+        else
+          rear = rear.rest = new_node
+        end
+
+        node = node.rest
+      end
+
+      tail = node.rest
+
+      if front.nil?
+        front = tail
+      else
+        rear.rest = tail
+      end
+
+      initialize_list(front, @count - 1)
+    end
+
+    def do_index(obj, test)
+      Node.index(@store, obj, test: test)
     end
   end
   

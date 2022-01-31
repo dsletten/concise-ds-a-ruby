@@ -174,19 +174,19 @@ module Collections
     end
 
     private
-    def create_stack(type, top, count)
-      stack = PersistentStack.new(type)
+    def create_stack(top, count)
+      stack = PersistentStack.new(@type)
       stack.top = top
       stack.count = count
       stack
     end
     
     def do_push(obj)
-      create_stack(@type, Node.new(obj, @top), @count + 1)
+      create_stack(Node.new(obj, @top), @count + 1)
     end
 
     def do_pop
-      create_stack(@type, @top.rest, @count - 1)
+      create_stack(@top.rest, @count - 1)
     end
 
     def do_peek

@@ -481,3 +481,40 @@ end
 # delete front  9.987988   0.000000   9.987988 (  9.988117)
 #        user     system      total        real
 # delete rear 47.436063   0.000000  47.436063 ( 47.443081)
+
+
+# al.contains?(3, test: ->(item, elt) {elt == item + 1})
+# => 4
+# al.contains?(2, test: ->(item, elt) {elt > item * 2})
+# => 5
+#sll.add(1, 2, 3, 4, 5)
+# sll.contains?(2, test: ->(item, elt) {elt > item * 2})
+# => 5
+# sll.contains?(3, test: ->(item, elt) {elt == item + 1})
+# => 4
+
+# dll.contains?(2.0)
+# => 2
+# irb(main):200:0> dll.contains?(2, test: ->(item, elt) {elt > item * 2})
+# => 5
+# irb(main):201:0> dll.contains?(3, test: ->(item, elt) {elt == item + 1})
+# => 4
+
+# hl.contains?(3, test: ->(item, elt) {elt % item == 0})
+# => 3
+
+# al.add(:a, :b, :c, :d)
+# sll.add(?a, ?b, ?c, ?d)
+# dll.add(?A, ?B, ?C, ?D)
+# al == sll
+# => false
+# al.==(sll, test: ->(x, y) {x.to_s == y.to_s})
+# => true
+# sll.==(al, test: ->(x, y) {x.to_s == y.to_s})
+# sll.==(dll, test: ->(x, y) {x.to_s.downcase == y.to_s.downcase})
+# => true
+
+# al.add(2, 3, 4, 5)
+# => [2, 3, 4, 5]
+# al.index(3, test: ->(item, elt) {elt % item == 0})
+# => 1
