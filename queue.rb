@@ -16,8 +16,12 @@
 #    (CircularQueue is also just trivially different from LinkedQueue).
 #    
 
-module Collections
+module Containers
   class Queue < Dispenser
+    def empty?
+      size.zero?
+    end
+
     def clear
       dequeue until empty?
     end
@@ -68,9 +72,9 @@ module Collections
       @count
     end
 
-    def empty?
-      size.zero?
-    end
+    # def empty?
+    #   size.zero?
+    # end
 
     #    This is not good enough. Must release the references to elements. Use superclass method.
     # def clear
@@ -125,9 +129,9 @@ module Collections
       @store.size
     end
 
-    def empty?
-      @store.empty?
-    end
+    # def empty?
+    #   @store.empty?
+    # end
 
     def clear
       @store = []
@@ -160,9 +164,9 @@ module Collections
       @count
     end
 
-    def empty?
-      size.zero?
-    end
+    # def empty?
+    #   size.zero?
+    # end
 
     def clear   # Call initialize??
       @front = nil
@@ -213,9 +217,9 @@ module Collections
       @count
     end
 
-    def empty?
-      size.zero?
-    end
+    # def empty?
+    #   size.zero?
+    # end
 
     def clear   # Call initialize??
       @index = nil
@@ -340,9 +344,9 @@ module Collections
       @store.size
     end
 
-    def empty?
-      @store.empty?
-    end
+    # def empty?
+    #   @store.empty?
+    # end
 
     def clear
       @store = {}
@@ -379,9 +383,9 @@ module Collections
       @count
     end
 
-    def empty?
-      size.zero?
-    end
+    # def empty?
+    #   size.zero?
+    # end
 
     def clear
       PersistentQueue.new(@type)
@@ -445,4 +449,135 @@ module Collections
       end
     end
   end
+
+  class Deque < Queue
+    # def dequeue
+    #   raise StandardError.new("Deque is empty.") if empty?
+    #   do_dequeue
+    # end
+
+    # def front
+    #   raise StandardError.new("Deque is empty.") if empty?
+    #   do_front
+    # end
+
+    def enqueue_front(obj)
+      raise ArgumentError.new("#{obj} is not of type #{type}") unless obj.is_a?(type)
+      do_enqueue_front(obj)
+    end
+
+    def dequeue_rear
+      raise StandardError.new("Deque is empty.") if empty?
+      do_dequeue_rear
+    end
+
+    def rear
+      raise StandardError.new("Deque is empty.") if empty?
+      do_rear
+    end
+
+    private
+    def do_enqueue_front(obj)
+      raise NoMethodError, "#{self.class} does not implement do_enqueue_front()"
+    end
+
+    def do_dequeue_rear
+      raise NoMethodError, "#{self.class} does not implement do_dequeue_rear()"
+    end
+
+    def do_rear
+      raise NoMethodError, "#{self.class} does not implement do_rear()"
+    end
+  end
+
+  class DllDeque < Deque
+    def initialize(type=Object)
+      super(type)
+      @list = DoublyLinkedList.new(type)
+    end
+    
+    def size
+      @list.size
+    end
+
+    private
+    def do_enqueue(obj)
+      @list.add(obj)
+    end
+
+    def do_dequeue
+      discard = front
+      @list.delete(0)
+      discard
+    end
+
+    def do_enqueue_front(obj)
+      @list.insert(0, obj)
+    end
+
+    def do_dequeue_rear
+      discard = rear
+      @list.delete(-1)
+      discard
+    end
+    
+    def do_front
+      @list.get(0)
+    end
+
+    def do_rear
+      @list.get(-1)
+    end
+  end
+
+  class HashDeque < Deque
+    def initialize(type=Object)
+      super(type)
+      @store = {}
+      @front = 0
+      @rear = 0
+    end
+    
+    def size
+      @store.size
+    end
+
+    def clear
+      @store = {}
+      @front = 0
+      @rear = 0
+    end
+
+    private
+    def do_enqueue(obj)
+      @rear += 1 unless empty?
+      @store[@rear] = obj
+    end
+
+    def do_dequeue
+      discard = @store.delete(@front)
+      @front += 1 unless empty?
+      discard
+    end
+
+    def do_enqueue_front(obj)
+      @front -= 1 unless empty?
+      @store[@front] = obj
+    end
+
+    def do_dequeue_rear
+      discard = @store.delete(@rear)
+      @rear -= 1 unless empty?
+      discard
+    end
+    
+    def do_front
+      @store[@front]
+    end
+
+    def do_rear
+      @store[@rear]
+    end
+  end
+    
 end

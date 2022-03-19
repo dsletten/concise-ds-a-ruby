@@ -12,13 +12,18 @@
 
 #
 #    TODO:
-#    -PersistentList/Iterator/ListIterator
 #    -Tests!!
 #
 #    No distinction between type of list and type of `fill_elt`??? Compare Lisp...
+#
+#    Array syntax is convenient and consistent with arrays/hashes. But assignment
+#    is problematic for PersistentList, which must return new instance rather than
+#    RHS.
+#    l[i] vs. l.get(i)
+#    l[i] = x vs. l.set(i, x)
 #    
 
-module Collections
+module Containers
   class List < Collection
     attr_reader :fill_elt
     
@@ -42,10 +47,10 @@ module Collections
       result << ")"
     end
 
-# PersistentList !!!
-#    def equals(l)
-    def ==(list, test: ->(x, y) {x == y})
-      if list.size == self.size
+    def equals(list, test: ->(x, y) {x == y})
+      if list.is_a?(PersistentList) # ???????????????????????
+        list.equals(self, test: ->(x, y) { test.call(y, x) })
+      elsif list.size == self.size
         i1 = self.iterator
         i2 = list.iterator
 
@@ -61,6 +66,8 @@ module Collections
       end
     end
      
+    alias == equals
+
     def each
       i = iterator
       until i.done?
@@ -115,13 +122,15 @@ module Collections
     end
     #############################################################################################
 
-    def [](i)
+#    def [](i)
+    def get(i)
       if i.negative?
         j = i + size
         if j.negative?
           nil
         else
-          self[j]
+          #          self[j]
+          get(j)
         end
       elsif i >= size
         nil
@@ -130,13 +139,15 @@ module Collections
       end
     end
 
-    def []=(i, obj)
+#    def []=(i, obj)
+    def set(i, obj)
       raise ArgumentError.new("#{obj} is not of type #{type}") unless obj.is_a?(type)
 
       if i.negative?
         j = i + size
         unless j.negative?
-          self[j] = obj
+          #          self[j] = obj
+          set(j, obj)
         end
       elsif i >= size
         extend_list(i, obj)
@@ -150,9 +161,7 @@ module Collections
       do_index(obj, test)
     end
     
-    def slice(i, n)
-      raise ArgumentError.new("Slice count must be non-negative: #{n}") if n < 0
-
+    def slice(i, n=nil)
       if i.negative?
         j = i + size
         if j.negative?
@@ -160,6 +169,10 @@ module Collections
         else
           slice(j, n)
         end
+      elsif n.nil?
+        do_slice(i, size - i)
+      elsif n.negative?
+        raise ArgumentError.new("Slice count must be non-negative: #{n}")
       else
         do_slice(i, n)
       end
@@ -581,7 +594,7 @@ module Collections
 
     private
     def do_do_current  # ?!?!
-      @collection[@cursor]
+      @collection.get(@cursor)
     end
 
     def do_done?
@@ -740,7 +753,7 @@ module Collections
     end
     
     def list_iterator(start=0)
-      SinglyLinkedListListIterator.new(self, start)
+      SinglyLinkedListListIterator.new(self, start)  # !!!!!!!!!!!!!!!!!
     end
 
     private
@@ -965,7 +978,8 @@ module Collections
 
   class Dcursor
 #    protected ?!
-    attr_reader :node, :index
+    attr_reader :node
+    attr_accessor :index # ???? Needed for add_before???
 
     def initialize(list)
       @list = list
@@ -1100,34 +1114,73 @@ module Collections
       end
     end
 
-    def nth_dcons(i)
-      raise ArgumentError.new("Invalid index: #{i}") if (i < 0  ||  i >= size)
+    # def nth_dcons(i)
+    #   raise ArgumentError.new("Invalid index: #{i}") if (i < 0  ||  i >= size)
 
+    #   if empty?
+    #     raise ArgumentError.new("List is empty.")
+    #   else
+    #     index = @cursor.index
+        
+    #     if i.zero?
+    #       @store
+    #     elsif i == index
+    #       @cursor.node
+    #     elsif i < index / 2
+    #       @cursor.reset
+    #       @cursor.advance(i)
+    #       @cursor.node
+    #     elsif i < index
+    #       @cursor.rewind(index - i)
+    #       @cursor.node
+    #     elsif i <= (size + index) / 2
+    #       @cursor.advance(i - index)
+    #       @cursor.node
+    #     else
+    #       @cursor.reset
+    #       @cursor.rewind(size - i)
+    #       @cursor.node
+    #     end
+    #   end
+    # end
+
+    def nth_dcons(i)
       if empty?
         raise ArgumentError.new("List is empty.")
       else
+        raise ArgumentError.new("Invalid index: #{i}") if (i < 0  ||  i >= size)
+        
+        reposition_cursor(i)
+
+        @cursor.node
+      end
+    end
+
+    def reposition_cursor(i)
         index = @cursor.index
         
         if i.zero?
-          @store
-        elsif i == index
-          @cursor.node
-        elsif i < index / 2
           @cursor.reset
-          @cursor.advance(i)
-          @cursor.node
         elsif i < index
-          @cursor.rewind(index - i)
-          @cursor.node
-        elsif i <= (size + index) / 2
-          @cursor.advance(i - index)
-          @cursor.node
-        else
-          @cursor.reset
-          @cursor.rewind(size - i)
-          @cursor.node
+          index_delta = index - i
+
+          if i < index_delta
+            @cursor.reset
+            @cursor.advance(i)
+          else
+            @cursor.rewind(index_delta)
+          end
+        elsif i > index
+          index_delta = i - index
+          size_delta = size - i
+
+          if index_delta <= size_delta
+            @cursor.advance(index_delta)
+          else
+            @cursor.reset
+            @cursor.rewind(size_delta)
+          end
         end
-      end
     end
 
     # def do_contains?(obj)
@@ -1207,12 +1260,14 @@ module Collections
       end
       
       @count += 1
-      @cursor.index += 1
+#      @cursor.index += 1
+      @cursor.reset
     end
 
     def do_do_insert_after(node, obj)
       node.splice_after(obj)
       @count += 1
+      @cursor.reset
     end
     
     def do_do_delete(i)
@@ -1374,8 +1429,9 @@ module Collections
 
     def do_contains?(obj, test)
       size.times do |i|
-        if test.call(obj, @store[i])
-          return @store[i]
+        elt = get(i)
+        if test.call(obj, elt)
+          return elt
         end
       end
 
@@ -1417,7 +1473,7 @@ module Collections
     
     def do_index(obj, test)
       size.times do |i|
-        if test.call(obj, @store[i])
+        if test.call(obj, get(i))
           return i
         end
       end
@@ -1433,7 +1489,7 @@ module Collections
       slice = []
 
       low.upto(high-1) do |j|
-        slice << @store[j]
+        slice << get(j)
       end
 
       list.add(*slice)
@@ -1442,6 +1498,8 @@ module Collections
   end
 
   class PersistentList < List
+    attr_reader :store
+
     def initialize(type=Object, fill_elt=nil)
       super(type, fill_elt)
       @store = nil
@@ -1463,6 +1521,23 @@ module Collections
       result << ")"
     end
 
+    alias == equals
+    def equals(list, test: ->(x, y) {x == y})
+      if list.is_a?(PersistentList)
+        pequals(list, test)
+      else
+        lequals(list, test)
+      end
+    end
+
+    def each
+      i = iterator
+      until i.done?
+        yield i.current
+        i = i.next
+      end
+    end
+
     def size
       @count
     end
@@ -1473,6 +1548,14 @@ module Collections
 
     def clear
       PersistentList.new(@type, @fill_elt)
+    end
+
+    def iterator
+      PersistentListIterator.new(self)
+    end
+    
+    def list_iterator(start=0)
+      PersistentListListIterator.new(self, start)
     end
 
     def delete(i)
@@ -1504,6 +1587,40 @@ module Collections
       list
     end
     
+    def pequals(list, test)
+      if list.size == self.size
+        i1 = self.iterator
+        i2 = list.iterator
+
+        until i1.done?  &&  i2.done?
+          return false unless test.call(i1.current, i2.current)
+          i1 = i1.next
+          i2 = i2.next
+        end
+
+        true
+      else
+        false
+      end
+    end
+     
+    def lequals(list, test)
+      if list.size == self.size
+        i1 = self.iterator
+        i2 = list.iterator
+
+        until i1.done?  &&  i2.done?
+          return false unless test.call(i1.current, i2.current)
+          i1 = i1.next
+          i2.next
+        end
+
+        true
+      else
+        false
+      end
+    end
+     
     def do_contains?(obj, test)
       Node.include?(@store, obj, test: test)
     end
@@ -1521,74 +1638,89 @@ module Collections
       end
     end
 
-    def do_insert(i, obj)
+    def adjust_node(store, i, adjustment)
       front = nil
       rear = nil
       node = @store
-
+      
       i.times do |j|
         new_node = Node.new(node.first, nil)
-
+        
         if front.nil?
           rear = front = new_node
         else
           rear = rear.rest = new_node
         end
-
+        
         node = node.rest
       end
-
-      tail = Node.new(obj, node)
-
+      
+      tail = adjustment.call(node)
+      
       if front.nil?
         front = tail
       else
         rear.rest = tail
       end
+      
+      front
+    end
 
-      initialize_list(front, @count + 1)
+    def do_insert(i, obj)
+      initialize_list(adjust_node(@store, i, ->(node) { Node.new(obj, node) }), @count + 1)
     end
 
     def do_delete(i)
-      front = nil
-      rear = nil
-      node = @store
-
-      i.times do |j|
-        new_node = Node.new(node.first, nil)
-
-        if front.nil?
-          rear = front = new_node
-        else
-          rear = rear.rest = new_node
-        end
-
-        node = node.rest
-      end
-
-      tail = node.rest
-
-      if front.nil?
-        front = tail
-      else
-        rear.rest = tail
-      end
-
-      initialize_list(front, @count - 1)
+      initialize_list(adjust_node(@store, i, ->(node) { node.rest }), @count - 1)
     end
 
+    def do_get(i)
+      Node.nth(@store, i)
+    end
+
+    def do_set(i, obj)
+      initialize_list(adjust_node(@store, i, ->(node) { Node.new(obj, node.rest) }), @count)
+    end
+    
     def do_index(obj, test)
       Node.index(@store, obj, test: test)
     end
   end
-  
+
+  class PersistentListIterator < Iterator
+    def initialize(collection)
+      @collection = collection
+    end
+
+    def next
+      if done?
+        self
+      else
+        PersistentListIterator.new(@collection.delete(0))
+      end
+    end
+
+    def done?
+      @collection.empty?
+    end
+
+    private
+    def do_current
+      @collection.get(0)
+    end
+  end
+
   class ListIterator
+    def initialize(list)
+      @list = list
+    end
+    
     def type
-      raise NoMethodError, "#{self.class} does not implement type()"
+      @list.type
     end
 
     def empty?
-      raise NoMethodError, "#{self.class} does not implement empty?()"
+      @list.empty?
     end
 
     def current
@@ -1601,7 +1733,8 @@ module Collections
       do_current_index
     end
 
-    def current=(obj)
+#    def current=(obj)
+    def set_current(obj)
       raise ArgumentError.new("#{obj} is not of type #{type}") unless obj.is_a?(type)
       raise StandardError.new("List is empty.") if empty?
       do_set_current(obj)
@@ -1676,7 +1809,7 @@ module Collections
 
   class MutableListListIterator < ListIterator
     def initialize(list)
-      @list = list
+      super(list)
       @expected_modification_count = @list.modification_count
     end
     
@@ -1734,17 +1867,22 @@ module Collections
 
     def do_remove
       raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
-      do_do_remove
+      doomed = do_do_remove
+      count_modification
+
+      doomed
     end
 
     def do_add_before(obj)
       raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
       do_do_add_before(obj)
+      count_modification
     end
 
     def do_add_after(obj)
       raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
       do_do_add_after(obj)
+      count_modification
     end
 
     def do_do_current  
@@ -1783,16 +1921,14 @@ module Collections
   class RandomAccessListListIterator < MutableListListIterator
     def initialize(list, start=0)
       super(list)
-      raise ArgumentError.new("Invalid index: #{start}") unless (start >= 0  &&  start < [@list.size, 1].max)
-      @cursor = start
-    end
 
-    def type
-      @list.type
-    end
-
-    def empty?
-      @list.empty?
+      if start < 0 
+        raise ArgumentError.new("Invalid index: #{start}")
+      elsif list.empty?
+        @cursor = 0
+      else
+        @cursor = [start, list.size - 1].min
+      end
     end
 
     private
@@ -1805,7 +1941,8 @@ module Collections
     end
 
     def do_do_current
-      @list[@cursor]
+#      @list[@cursor]
+      @list.get(@cursor)
     end
 
     def do_do_current_index
@@ -1813,7 +1950,8 @@ module Collections
     end
 
     def do_do_set_current(obj)
-      @list[@cursor] = obj
+#      @list[@cursor] = obj
+      @list.set(@cursor, obj)
     end
 
     def do_do_next
@@ -1840,10 +1978,7 @@ module Collections
         @cursor -= 1
       end
 
-      result = @list.delete(index)
-
-      count_modification
-      result
+      @list.delete(index)
     end
     
     def do_do_add_before(obj)
@@ -1853,8 +1988,6 @@ module Collections
         @list.insert(@cursor, obj)
         @cursor += 1
       end
-
-      count_modification
     end
 
     def do_do_add_after(obj)
@@ -1863,30 +1996,23 @@ module Collections
       else
         @list.insert(@cursor+1, obj)
       end
-
-      count_modification
     end
   end
 
   class SinglyLinkedListListIterator < MutableListListIterator
     def initialize(list, start=0)
       super(list)
-      raise ArgumentError.new("Invalid index: #{start}") unless (start >= 0  &&  start < [@list.size, 1].max)
       @cursor = @list.store
       @index = 0
       @history = LinkedStack.new
 
-      start.times do
-        next
+      raise ArgumentError.new("Invalid index: #{start}") if start < 0 
+
+      unless list.empty?
+        [start, list.size - 1].min.times do
+          self.next # !!!!
+        end
       end
-    end
-
-    def type
-      @list.type
-    end
-
-    def empty?
-      @list.empty?
     end
 
     private
@@ -1937,8 +2063,9 @@ module Collections
 
     def do_do_remove
       if @index.zero?
-        result = @list.delete_node(@cursor)
+        doomed = @list.delete_node(@cursor)
         initialize_cursor
+        doomed
       else
         parent = @history.peek
         if has_next?
@@ -1948,11 +2075,8 @@ module Collections
           @index -= 1
         end
 
-        result = @list.delete_child(parent)
+        @list.delete_child(parent)
       end
-
-      count_modification
-      result
     end
     
     def do_do_add_before(obj)
@@ -1965,8 +2089,6 @@ module Collections
         @cursor = @cursor.rest
         @index += 1
       end
-
-      count_modification
     end
 
     def do_do_add_after(obj)
@@ -1976,25 +2098,16 @@ module Collections
       else
         @list.insert_after(@cursor, obj)
       end
-
-      count_modification
     end
   end
 
   class DoublyLinkedListListIterator < MutableListListIterator
     def initialize(list, start=0)
       super(list)
-      raise ArgumentError.new("Invalid index: #{start}") unless (start >= 0  &&  start < [@list.size, 1].max)
+      raise ArgumentError.new("Invalid index: #{start}") if start < 0 
+
       @cursor = Dcursor.new(list)
-      @cursor.advance(start) unless start.zero?
-    end
-
-    def type
-      @list.type
-    end
-
-    def empty?
-      @list.empty?
+      @cursor.advance([start, list.size - 1].min) unless start.zero?
     end
 
     private
@@ -2038,8 +2151,9 @@ module Collections
 
     def do_do_remove
       if @cursor.index.zero?
-        result = @list.delete_node(@cursor.node)
+        doomed = @list.delete_node(@cursor.node)
         @cursor.reset
+        doomed
       else
         current_node = @cursor.node
         if has_next?
@@ -2048,11 +2162,8 @@ module Collections
           @cursor.rewind
         end
 
-        result = @list.delete_node(current_node)
+        @list.delete_node(current_node)
       end
-
-      count_modification
-      result
     end
     
     def do_do_add_before(obj)
@@ -2063,8 +2174,6 @@ module Collections
         @list.insert_before(@cursor.node, obj)
         @cursor.index += 1
       end
-
-      count_modification
     end
 
     def do_do_add_after(obj)
@@ -2074,8 +2183,103 @@ module Collections
       else
         @list.insert_after(@cursor.node, obj)
       end
+    end
+  end
 
-      count_modification
+  class PersistentListListIterator < ListIterator
+    def initialize(list, start=0)
+      @list = list
+      @cursor = @list.store
+      @index = 0
+      @history = PersistentStack.new
+
+      #
+      #    Have to take different approach than CLOS??
+      #    
+      start.times do
+        @history = @history.push(@cursor)
+        @cursor = @cursor.rest
+        @index += 1
+      end
+    end
+
+    def has_next?
+      !@cursor.rest.nil?
+    end
+
+    def has_previous?
+      !@history.empty?
+    end
+
+    protected
+    def initialize_iterator(index, cursor, history)
+      iterator = PersistentListListIterator.new(@list)
+      iterator.cursor = cursor
+      iterator.index = index
+      iterator.history = history
+      iterator
+    end
+
+    def cursor=(cursor)
+      @cursor = cursor
+    end
+
+    def index=(index)
+      @index = index
+    end
+
+    def history=(history)
+      @history = history
+    end
+
+    private
+    def do_current
+      @cursor.first
+    end
+
+    def do_current_index
+      @index
+    end
+
+    def do_set_current(obj)
+      @list.set(@index, obj).list_iterator(@index)
+    end
+    
+    def do_next
+      if has_next?
+        initialize_iterator(@index+1, @cursor.rest, @history.push(@cursor))
+      else
+        nil
+      end
+    end
+
+    def do_previous
+      if has_previous?
+        initialize_iterator(@index-1, @history.peek, @history.pop)
+      else
+        nil
+      end
+    end
+
+    def do_remove
+      list = @list.delete(@index)
+      list.list_iterator([@index, list.size-1].min)
+    end
+    
+    def do_add_before(obj)
+      if empty?
+        @list.add(obj).list_iterator
+      else
+        @list.insert(@index, obj).list_iterator(@index + 1)
+      end
+    end
+
+    def do_add_after(obj)
+      if empty?
+        @list.add(obj).list_iterator
+      else
+        @list.insert(@index + 1, obj).list_iterator(@index)
+      end
     end
   end
 end

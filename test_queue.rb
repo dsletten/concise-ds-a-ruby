@@ -111,84 +111,84 @@ end
 
 class TestLinkedQueue < TestQueue
   def test_it
-    test_constructor(lambda {Collections::LinkedQueue.new})
-    test_empty?(lambda {Collections::LinkedQueue.new})
-    test_size(lambda {Collections::LinkedQueue.new})
-    test_clear(lambda {Collections::LinkedQueue.new})
-    test_dequeue(lambda {Collections::LinkedQueue.new})
-    test_front(lambda {Collections::LinkedQueue.new})
-    test_wave(lambda {Collections::LinkedQueue.new})
+    test_constructor(lambda {Containers::LinkedQueue.new})
+    test_empty?(lambda {Containers::LinkedQueue.new})
+    test_size(lambda {Containers::LinkedQueue.new})
+    test_clear(lambda {Containers::LinkedQueue.new})
+    test_dequeue(lambda {Containers::LinkedQueue.new})
+    test_front(lambda {Containers::LinkedQueue.new})
+    test_wave(lambda {Containers::LinkedQueue.new})
   end
 end
 
 class TestCircularQueue < TestQueue
   def test_it
-    test_constructor(lambda {Collections::CircularQueue.new})
-    test_empty?(lambda {Collections::CircularQueue.new})
-    test_size(lambda {Collections::CircularQueue.new})
-    test_clear(lambda {Collections::CircularQueue.new})
-    test_dequeue(lambda {Collections::CircularQueue.new})
-    test_front(lambda {Collections::CircularQueue.new})
-    test_wave(lambda {Collections::CircularQueue.new})
+    test_constructor(lambda {Containers::CircularQueue.new})
+    test_empty?(lambda {Containers::CircularQueue.new})
+    test_size(lambda {Containers::CircularQueue.new})
+    test_clear(lambda {Containers::CircularQueue.new})
+    test_dequeue(lambda {Containers::CircularQueue.new})
+    test_front(lambda {Containers::CircularQueue.new})
+    test_wave(lambda {Containers::CircularQueue.new})
   end
 end
 
 class TestRecyclingQueue < TestQueue
   def test_it
-    test_constructor(lambda {Collections::RecyclingQueue.new})
-    test_empty?(lambda {Collections::RecyclingQueue.new})
-    test_size(lambda {Collections::RecyclingQueue.new})
-    test_clear(lambda {Collections::RecyclingQueue.new})
-    test_dequeue(lambda {Collections::RecyclingQueue.new})
-    test_front(lambda {Collections::RecyclingQueue.new})
-    test_wave(lambda {Collections::RecyclingQueue.new})
+    test_constructor(lambda {Containers::RecyclingQueue.new})
+    test_empty?(lambda {Containers::RecyclingQueue.new})
+    test_size(lambda {Containers::RecyclingQueue.new})
+    test_clear(lambda {Containers::RecyclingQueue.new})
+    test_dequeue(lambda {Containers::RecyclingQueue.new})
+    test_front(lambda {Containers::RecyclingQueue.new})
+    test_wave(lambda {Containers::RecyclingQueue.new})
   end
 end
 
 class TestRingBuffer < TestQueue
   def test_it
-    test_constructor(lambda {Collections::RingBuffer.new})
-    test_empty?(lambda {Collections::RingBuffer.new})
-    test_size(lambda {Collections::RingBuffer.new})
-    test_clear(lambda {Collections::RingBuffer.new})
-    test_dequeue(lambda {Collections::RingBuffer.new})
-    test_front(lambda {Collections::RingBuffer.new})
-    test_wave(lambda {Collections::RingBuffer.new})
+    test_constructor(lambda {Containers::RingBuffer.new})
+    test_empty?(lambda {Containers::RingBuffer.new})
+    test_size(lambda {Containers::RingBuffer.new})
+    test_clear(lambda {Containers::RingBuffer.new})
+    test_dequeue(lambda {Containers::RingBuffer.new})
+    test_front(lambda {Containers::RingBuffer.new})
+    test_wave(lambda {Containers::RingBuffer.new})
   end
 end
 
 class TestRubyQueue < TestQueue
   def test_it
-    test_constructor(lambda {Collections::RubyQueue.new})
-    test_empty?(lambda {Collections::RubyQueue.new})
-    test_size(lambda {Collections::RubyQueue.new})
-    test_clear(lambda {Collections::RubyQueue.new})
-    test_dequeue(lambda {Collections::RubyQueue.new})
-    test_front(lambda {Collections::RubyQueue.new})
-    test_wave(lambda {Collections::RubyQueue.new})
+    test_constructor(lambda {Containers::RubyQueue.new})
+    test_empty?(lambda {Containers::RubyQueue.new})
+    test_size(lambda {Containers::RubyQueue.new})
+    test_clear(lambda {Containers::RubyQueue.new})
+    test_dequeue(lambda {Containers::RubyQueue.new})
+    test_front(lambda {Containers::RubyQueue.new})
+    test_wave(lambda {Containers::RubyQueue.new})
   end
 end
 
 class TestArrayQueue < TestQueue
   def test_it
-    test_constructor(lambda {Collections::ArrayQueue.new})
-    test_empty?(lambda {Collections::ArrayQueue.new})
-    test_size(lambda {Collections::ArrayQueue.new})
-    test_clear(lambda {Collections::ArrayQueue.new})
-    test_dequeue(lambda {Collections::ArrayQueue.new})
-    test_front(lambda {Collections::ArrayQueue.new})
-    test_wave(lambda {Collections::ArrayQueue.new})
+    test_constructor(lambda {Containers::ArrayQueue.new})
+    test_empty?(lambda {Containers::ArrayQueue.new})
+    test_size(lambda {Containers::ArrayQueue.new})
+    test_clear(lambda {Containers::ArrayQueue.new})
+    test_dequeue(lambda {Containers::ArrayQueue.new})
+    test_front(lambda {Containers::ArrayQueue.new})
+    test_wave(lambda {Containers::ArrayQueue.new})
   end
 end
 
 class TestHashQueue < TestQueue
   def test_it
-    test_constructor(lambda {Collections::HashQueue.new})
-    test_empty?(lambda {Collections::HashQueue.new})
-    test_size(lambda {Collections::HashQueue.new})
-    test_clear(lambda {Collections::HashQueue.new})
-    test_dequeue(lambda {Collections::HashQueue.new})
-    test_front(lambda {Collections::HashQueue.new})
-    test_wave(lambda {Collections::HashQueue.new})
+    test_constructor(lambda {Containers::HashQueue.new})
+    test_empty?(lambda {Containers::HashQueue.new})
+    test_size(lambda {Containers::HashQueue.new})
+    test_clear(lambda {Containers::HashQueue.new})
+    test_dequeue(lambda {Containers::HashQueue.new})
+    test_front(lambda {Containers::HashQueue.new})
+    test_wave(lambda {Containers::HashQueue.new})
   end
 end

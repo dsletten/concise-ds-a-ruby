@@ -11,7 +11,7 @@
 #       ------ -----------------------------------------
 #       211113 Original.
 
-module Collections
+module Containers
   class Stack < Dispenser
     def push(obj)
       raise ArgumentError.new("#{obj} is not of type #{type}") unless obj.is_a?(type)

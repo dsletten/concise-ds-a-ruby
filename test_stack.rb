@@ -133,36 +133,36 @@ end
 
 class TestLinkedStack < TestStack
   def test_it
-    test_constructor(lambda {Collections::LinkedStack.new})
-    test_empty?(lambda {Collections::LinkedStack.new})
-    test_size(lambda {Collections::LinkedStack.new})
-    test_clear(lambda {Collections::LinkedStack.new})
-    test_pop(lambda {Collections::LinkedStack.new})
-    test_peek(lambda {Collections::LinkedStack.new})
-    test_wave(lambda {Collections::LinkedStack.new})
+    test_constructor(lambda {Containers::LinkedStack.new})
+    test_empty?(lambda {Containers::LinkedStack.new})
+    test_size(lambda {Containers::LinkedStack.new})
+    test_clear(lambda {Containers::LinkedStack.new})
+    test_pop(lambda {Containers::LinkedStack.new})
+    test_peek(lambda {Containers::LinkedStack.new})
+    test_wave(lambda {Containers::LinkedStack.new})
   end
 end
 
 class TestArrayStack < TestStack
   def test_it
-    test_constructor(lambda {Collections::ArrayStack.new})
-    test_empty?(lambda {Collections::ArrayStack.new})
-    test_size(lambda {Collections::ArrayStack.new})
-    test_clear(lambda {Collections::ArrayStack.new})
-    test_pop(lambda {Collections::ArrayStack.new})
-    test_peek(lambda {Collections::ArrayStack.new})
-    test_wave(lambda {Collections::ArrayStack.new})
+    test_constructor(lambda {Containers::ArrayStack.new})
+    test_empty?(lambda {Containers::ArrayStack.new})
+    test_size(lambda {Containers::ArrayStack.new})
+    test_clear(lambda {Containers::ArrayStack.new})
+    test_pop(lambda {Containers::ArrayStack.new})
+    test_peek(lambda {Containers::ArrayStack.new})
+    test_wave(lambda {Containers::ArrayStack.new})
   end
 end
 
 class TestHashStack < TestStack
   def test_it
-    test_constructor(lambda {Collections::HashStack.new})
-    test_empty?(lambda {Collections::HashStack.new})
-    test_size(lambda {Collections::HashStack.new})
-    test_clear(lambda {Collections::HashStack.new})
-    test_pop(lambda {Collections::HashStack.new})
-    test_peek(lambda {Collections::HashStack.new})
-    test_wave(lambda {Collections::HashStack.new})
+    test_constructor(lambda {Containers::HashStack.new})
+    test_empty?(lambda {Containers::HashStack.new})
+    test_size(lambda {Containers::HashStack.new})
+    test_clear(lambda {Containers::HashStack.new})
+    test_pop(lambda {Containers::HashStack.new})
+    test_peek(lambda {Containers::HashStack.new})
+    test_wave(lambda {Containers::HashStack.new})
   end
 end

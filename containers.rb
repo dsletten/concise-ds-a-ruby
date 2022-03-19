@@ -13,7 +13,7 @@
 #       ------ -----------------------------------------
 #       210102 Original.
 
-module Collections
+module Containers
   class Container
     attr_reader :type
 
