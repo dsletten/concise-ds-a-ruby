@@ -1696,7 +1696,7 @@ module Containers
       if done?
         self
       else
-        PersistentListIterator.new(@collection.delete(0))
+        @collection.delete(0).iterator
       end
     end
 
@@ -1818,12 +1818,14 @@ module Containers
     end
 
     def has_next?
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_has_next?
     end
 
     def has_previous?
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_has_previous?
     end
 
@@ -1832,28 +1834,37 @@ module Containers
       @expected_modification_count != @list.modification_count
     end
 
-    def do_current
+    def check_comodification
       raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+    end
+
+    def do_current
+      check_comodification
+
       do_do_current
     end
     
     def do_current_index
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_do_current_index
     end
 
     def do_set_current(obj)
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_do_set_current(obj)
     end
 
     def do_next
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_do_next
     end
 
     def do_previous
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_do_previous
     end
 
@@ -1866,22 +1877,28 @@ module Containers
     end
 
     def do_remove
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       doomed = do_do_remove
+
       count_modification
 
       doomed
     end
 
     def do_add_before(obj)
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_do_add_before(obj)
+
       count_modification
     end
 
     def do_add_after(obj)
-      raise StandardError.new("List iterator invalid due to structural modification of collection.") if comodified?
+      check_comodification
+
       do_do_add_after(obj)
+
       count_modification
     end
 

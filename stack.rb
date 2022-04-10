@@ -113,6 +113,38 @@ module Containers
     end
   end
 
+  class LinkedListStack < Stack
+    def initialize(type=Object)
+      super(type)
+      @list = SinglyLinkedList.new
+    end
+
+    def size
+      @list.size
+    end
+
+    def empty?
+      @list.empty?
+    end
+
+    def clear
+      @list.clear
+    end
+    
+    private
+    def do_push(obj)
+      @list.insert(0, obj)
+    end
+
+    def do_pop
+      @list.delete(0)
+    end
+
+    def do_peek
+      @list.get(0)
+    end
+  end
+
   class HashStack < Stack
     def initialize(type=Object)
       super(type)
@@ -191,6 +223,52 @@ module Containers
 
     def do_peek
       @top.first
+    end
+  end
+
+  class PersistentListStack < Stack
+    @@empty = PersistentList.new
+    
+    def initialize(type=Object)
+      super(type)
+      @list = @@empty
+    end
+
+    def size
+      @list.size
+    end
+
+    def empty?
+      @list.empty?
+    end
+
+    def clear
+      PersistentListStack.new(@type)
+    end
+
+    protected
+    def list=(list)
+      @list = list
+    end
+    
+    private
+    def create_stack(list)
+      stack = PersistentListStack.new(@type)
+      stack.list = list
+
+      stack
+    end
+    
+    def do_push(obj)
+      create_stack(@list.insert(0, obj))
+    end
+
+    def do_pop
+      create_stack(@list.delete(0))
+    end
+
+    def do_peek
+      @list.get(0)
     end
   end
 end

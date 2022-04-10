@@ -203,6 +203,34 @@ module Containers
     end
   end
 
+  class LinkedListQueue < Queue
+    def initialize(type=Object)
+      super(type)
+      @list = SinglyLinkedListX.new
+    end
+
+    def size
+      @list.size
+    end
+
+    def clear
+      @list.clear
+    end
+    
+    private
+    def do_enqueue(obj)
+      @list.add(obj)
+    end
+
+    def do_dequeue
+      @list.delete(0)
+    end
+
+    def do_front
+      @list.get(0)
+    end
+  end
+
   #
   #    See ch. 6 exercise 5
   #
@@ -427,7 +455,7 @@ module Containers
 
     def do_dequeue
       if @front.rest.nil?
-        create_queue(reverse(@rear), nil, @count - 1)
+        create_queue(Node.reverse(@rear), nil, @count - 1)
       else
         create_queue(@front.rest, @rear, @count - 1)
       end
@@ -436,17 +464,50 @@ module Containers
     def do_front
       @front.first
     end
+  end
 
-    def reverse(list)
-      do_reverse(list, nil)
+  class PersistentListQueue < Queue
+    @@empty = PersistentList.new
+    def initialize(type=Object)
+      super(type)
+      @list = @@empty
     end
 
-    def do_reverse(list, result)
-      if list.nil?
-        result
-      else
-        do_reverse(list.rest, Node.new(list.first, result))
-      end
+    def size
+      @list.size
+    end
+
+    def clear
+      PersistentListQueue.new(@type)
+    end
+    
+    protected
+    #
+    #    Writers only exist to adjust non-empty PersistentListQueue after creation.
+    #    Constructor only creates empty queues since it is public.
+    #    
+    def list=(list)
+      @list = list
+    end
+
+    private
+    def create_queue(list)
+      queue = PersistentListQueue.new(@type)
+      queue.list = list
+
+      queue
+    end
+    
+    def do_enqueue(obj)
+      create_queue(@list.add(obj))
+    end
+
+    def do_dequeue
+      create_queue(@list.delete(0))
+    end
+
+    def do_front
+      @list.get(0)
     end
   end
 
@@ -579,5 +640,92 @@ module Containers
       @store[@rear]
     end
   end
+
+  class PersistentDeque < Deque
+    def initialize(type=Object)
+      super(type)
+      @front = nil
+      @rear = nil
+      @count = 0
+    end
+
+    def size
+      @count
+    end
+
+    def clear
+      PersistentDeque.new(@type)
+    end
+
+    protected
+    def initialize_deque(front, rear, count)
+      dq = PersistentDeque.new(@type)
+      dq.front = front
+      dq.rear = rear
+      dq.count = count
+
+      dq
+    end
+
+    def front=(node)
+      @front = node
+    end
+
+    def rear=(node)
+      @rear = node
+    end
+
+    def count=(count)
+      @count = count
+    end
     
+    private
+    def do_enqueue(obj)
+      if empty?
+        initialize_deque(Node.new(obj, nil), Node.new(obj, nil), 1)
+      else
+        initialize_deque(@front, Node.new(obj, @rear), @count + 1)
+      end
+    end
+
+    def do_dequeue
+      if @front.rest.nil?
+        if @rear.rest.nil?
+          clear
+        else
+          initialize_deque(Node.reverse(@rear).rest, Node.new(@rear, nil), @count - 1)
+        end
+      else
+        initialize_deque(@front.rest, @rear, @count - 1)
+      end
+    end
+
+    def do_enqueue_front(obj)
+      if empty?
+        initialize_deque(Node.new(obj, nil), Node.new(obj, nil), 1)
+      else
+        initialize_deque(Node.new(obj, @front), @rear, @count + 1)
+      end
+    end
+
+    def do_dequeue_rear
+      if @rear.rest.nil?
+        if @front.rest.nil?
+          clear
+        else
+          initialize_deque(Node.new(@front, nil), Node.reverse(@front).rest, @count - 1)
+        end
+      else
+        initialize_deque(@front, @rear.rest, @count - 1)
+      end
+    end
+    
+    def do_front
+      @front.first
+    end
+
+    def do_rear
+      @rear.first
+    end
+  end
 end

@@ -157,6 +157,10 @@ module Containers
       end
     end
 
+    def self.reverse(list)
+      _reverse(list, nil)
+    end
+
     def splice_before(obj)
       copy = Node.new(@first, @rest)
       @first = obj
@@ -202,6 +206,14 @@ module Containers
         i
       else
         _index(node.rest, obj, i+1, test)
+      end
+    end
+
+    def self._reverse(list, result)
+      if list.nil?
+        result
+      else
+        _reverse(list.rest, Node.new(list.first, result))
       end
     end
   end
