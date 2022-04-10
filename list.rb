@@ -265,8 +265,11 @@ module Containers
     end
   end
   
-  class LinkedList < List
-    #private    These can't be private!!! Called by list iterator...
+  class MutableLinkedList < MutableList
+    def initialize(type, fill_elt)
+      super(type, fill_elt)
+    end
+
     ##########################################Structural modification############################
     def insert_before(node, obj)
       if !obj.is_a?(type)
@@ -288,12 +291,9 @@ module Containers
       end
     end
 
-    #
-    #    These are necessary in Ruby--no type check on node
-    #    
-    def delete_node(doomed)
-      raise ArgumentError.new("Invalid node") if doomed.nil?
-      do_delete_node(doomed)
+    def delete_node(node)
+      raise ArgumentError.new("Invalid node") if node.nil?
+      do_delete_node(node)
     end
 
     def delete_child(parent)
@@ -303,92 +303,27 @@ module Containers
 
     private
     def do_insert_before(node, obj)
-      raise NoMethodError, "#{self.class} does not implement do_insert_before()"
-    end
-      
-    def do_insert_after(node, obj)
-      raise NoMethodError, "#{self.class} does not implement do_insert_after()"
-    end
-
-    def do_delete_node(doomed)
-      raise NoMethodError, "#{self.class} does not implement do_delete_node()"
-    end
-
-    def do_delete_child(parent)
-      raise NoMethodError, "#{self.class} does not implement do_delete_child()"
-    end
-    #############################################################################################
-  end
-    
-  class MutableLinkedList < LinkedList
-    attr_reader :modification_count
-
-    def initialize(type, fill_elt)
-      super(type, fill_elt)
-      @modification_count = 0
-    end
-
-    def clear
-      count_modification
-      do_clear
-    end
-
-    private
-    def count_modification
-      @modification_count += 1
-    end
-
-    def do_clear
-      raise NoMethodError, "#{self.class} does not implement do_clear()"
-    end
-
-    def do_add(objs)
-      unless objs.empty?
-        count_modification
-        do_do_add(objs)
-      end
-    end
-
-    def do_insert(i, obj)
-      count_modification
-      do_do_insert(i, obj)
-    end
-
-    def do_delete(i)
-      count_modification
-      do_do_delete(i)
-    end
-
-    def do_insert_before(node, obj)
-      count_modification
       do_do_insert_before(node, obj)
+      count_modification
     end
       
     def do_insert_after(node, obj)
-      count_modification
       do_do_insert_after(node, obj)
+      count_modification
     end
 
-    def do_delete_node(doomed)
+    def do_delete_node(node)
+      dooomed = do_do_delete_node(node)
       count_modification
-      do_do_delete_node(doomed)
+
+      doomed
     end
 
     def do_delete_child(parent)
+      child = do_do_delete_child(parent)
       count_modification
-      do_do_delete_child(parent)
-    end
 
-    def do_do_add(objs)
-      raise NoMethodError, "#{self.class} does not implement do_do_add()"
-    end
-
-    def do_do_insert(i, obj)
-      raise NoMethodError, "#{self.class} does not implement do_do_insert()"
-    end
-
-    def do_do_delete(i)
-      raise NoMethodError, "#{self.class} does not implement do_do_delete()"
+      child
     end
 
     def do_do_insert_before(node, obj)
@@ -399,7 +334,7 @@ module Containers
       raise NoMethodError, "#{self.class} does not implement do_do_insert_after()"
     end
 
-    def do_do_delete_node(doomed)
+    def do_do_delete_node(node)
       raise NoMethodError, "#{self.class} does not implement do_do_delete_node()"
     end
 
