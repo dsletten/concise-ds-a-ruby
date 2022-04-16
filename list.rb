@@ -278,6 +278,7 @@ module Containers
         raise ArgumentError.new("Invalid node")
       else
         do_insert_before(node, obj)
+        count_modification
       end
     end
     
@@ -288,58 +289,41 @@ module Containers
         raise ArgumentError.new("Invalid node")
       else
         do_insert_after(node, obj)
+        count_modification
       end
     end
 
     def delete_node(node)
       raise ArgumentError.new("Invalid node") if node.nil?
-      do_delete_node(node)
-    end
-
-    def delete_child(parent)
-      raise ArgumentError.new("Invalid node") if parent.nil?
-      do_delete_child(parent)
-    end
-
-    private
-    def do_insert_before(node, obj)
-      do_do_insert_before(node, obj)
-      count_modification
-    end
-      
-    def do_insert_after(node, obj)
-      do_do_insert_after(node, obj)
-      count_modification
-    end
-
-    def do_delete_node(node)
-      dooomed = do_do_delete_node(node)
+      dooomed = do_delete_node(node)
       count_modification
 
       doomed
     end
 
-    def do_delete_child(parent)
-      child = do_do_delete_child(parent)
+    def delete_child(parent)
+      raise ArgumentError.new("Invalid node") if parent.nil?
+      child = do_delete_child(parent)
       count_modification
 
       child
     end
 
-    def do_do_insert_before(node, obj)
-      raise NoMethodError, "#{self.class} does not implement do_do_insert_before()"
+    private
+    def do_insert_before(node, obj)
+      raise NoMethodError, "#{self.class} does not implement do_insert_before()"
     end
       
-    def do_do_insert_after(node, obj)
-      raise NoMethodError, "#{self.class} does not implement do_do_insert_after()"
+    def do_insert_after(node, obj)
+      raise NoMethodError, "#{self.class} does not implement do_insert_after()"
     end
 
-    def do_do_delete_node(node)
-      raise NoMethodError, "#{self.class} does not implement do_do_delete_node()"
+    def do_delete_node(node)
+      raise NoMethodError, "#{self.class} does not implement do_delete_node()"
     end
 
-    def do_do_delete_child(parent)
-      raise NoMethodError, "#{self.class} does not implement do_do_delete_child()"
+    def do_delete_child(parent)
+      raise NoMethodError, "#{self.class} does not implement do_delete_child()"
     end
   end
 
@@ -597,12 +581,12 @@ module Containers
       @count += 1
     end
 
-    def do_do_insert_before(node, obj)
+    def do_insert_before(node, obj)
       node.splice_before(obj)
       @count += 1
     end
 
-    def do_do_insert_after(node, obj)
+    def do_insert_after(node, obj)
       node.splice_after(obj)
       @count += 1
     end
@@ -619,7 +603,7 @@ module Containers
       result
     end
 
-    def do_do_delete_node(doomed)
+    def do_delete_node(doomed)
       if doomed == @store
         result = @store.first
         @store = @store.rest
@@ -631,7 +615,7 @@ module Containers
       result
     end
 
-    def do_do_delete_child(parent)
+    def do_delete_child(parent)
       result = parent.excise_child
       
       @count -= 1
@@ -730,7 +714,7 @@ module Containers
       @count += 1
     end
 
-    def do_do_insert_before(node, obj)
+    def do_insert_before(node, obj)
       node.splice_before(obj)
 
       @rear = @rear.rest if node == @rear
@@ -738,7 +722,7 @@ module Containers
       @count += 1
     end
 
-    def do_do_insert_after(node, obj)
+    def do_insert_after(node, obj)
       node.splice_after(obj)
 
       @rear = @rear.rest if node == @rear
@@ -763,7 +747,7 @@ module Containers
       result
     end
 
-    def do_do_delete_node(doomed)
+    def do_delete_node(doomed)
       if doomed == @front
         result = @front.first
         @front = @front.rest
@@ -779,7 +763,7 @@ module Containers
       result
     end
 
-    def do_do_delete_child(parent)
+    def do_delete_child(parent)
       result = parent.excise_child
       
       @rear = parent if parent.rest.nil?
@@ -1187,7 +1171,7 @@ module Containers
       end
     end
 
-    def do_do_insert_before(node, obj)
+    def do_insert_before(node, obj)
       node.splice_before(obj)
 
       if node == @store
@@ -1199,7 +1183,7 @@ module Containers
       @cursor.reset
     end
 
-    def do_do_insert_after(node, obj)
+    def do_insert_after(node, obj)
       node.splice_after(obj)
       @count += 1
       @cursor.reset
@@ -1214,7 +1198,7 @@ module Containers
       doomed
     end
 
-    def do_do_delete_node(doomed)
+    def do_delete_node(doomed)
       result = delete_dcons(doomed)
 
       @count -= 1
@@ -1226,7 +1210,7 @@ module Containers
     #
     #    This is not really needed for DoublyLinkedList.
     #    
-    def do_do_delete_child(parent)
+    def do_delete_child(parent)
       child = parent.succ
 
       if child == @store

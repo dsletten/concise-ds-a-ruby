@@ -268,32 +268,36 @@ module Containers
       @expected_modification_count = @collection.modification_count
     end
 
-    def next
-      raise StandardError.new("Iterator invalid due to structural modification of collection.") if comodified?
-      do_next
+    def done?
+      check_comodification
+      do_done?
     end
 
-    def done?
-      raise StandardError.new("Iterator invalid due to structural modification of collection.") if comodified?
-      do_done?
+    def next
+      check_comodification
+      do_next
     end
 
     private
     def comodified?
       @expected_modification_count != @collection.modification_count
     end
-    
-    def do_current
+
+    def check_comodification
       raise StandardError.new("Iterator invalid due to structural modification of collection.") if comodified?
-      do_do_current #?!?!?!
+    end
+    
+    def do_done?
+      raise NoMethodError, "#{self.class} does not implement do_done?()"
     end
 
     def do_next
       raise NoMethodError, "#{self.class} does not implement do_next()"
     end
 
-    def do_done?
-      raise NoMethodError, "#{self.class} does not implement do_done?()"
+    def do_current
+      check_comodification
+      do_do_current #?!?!?!
     end
 
     def do_do_current
