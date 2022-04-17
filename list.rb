@@ -214,7 +214,7 @@ module Containers
   end
 
   class MutableList < List
-    attr_reader :modification_count
+#    attr_reader :modification_count
 
     def initialize(type, fill_elt)
       super(type, fill_elt)
@@ -342,7 +342,11 @@ module Containers
     end
 
     def iterator
-      RandomAccessListIterator.new(self)
+      cursor = 0
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    done: ->() {cursor == size},
+                                    current: ->() {get(cursor)},
+                                    advance: ->() {cursor += 1})
     end
     
     def list_iterator(start=0)
@@ -505,27 +509,6 @@ module Containers
   #   end
   # end
 
-  class RandomAccessListIterator < MutableCollectionIterator
-    def initialize(collection)
-      super(collection)
-      @cursor = 0
-    end
-
-    private
-    def do_do_current  # ?!?!
-      @collection.get(@cursor)
-    end
-
-    def do_done?
-      @cursor == @collection.size
-    end
-
-    def do_next
-      @cursor += 1 unless done?
-    end
-
-  end
-
   class SinglyLinkedList < MutableLinkedList
     attr_reader :store
 
@@ -544,7 +527,11 @@ module Containers
     end
 
     def iterator
-      SinglyLinkedListIterator.new(self)
+      cursor = @store
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    done: ->() {cursor.nil?},
+                                    current: ->() {cursor.first},
+                                    advance: ->() {cursor = cursor.rest})
     end
     
     def list_iterator(start=0)
@@ -668,7 +655,11 @@ module Containers
     end
 
     def iterator
-      SinglyLinkedListIterator.new(self)
+      cursor = @front
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    done: ->() {cursor.nil?},
+                                    current: ->() {cursor.first},
+                                    advance: ->() {cursor = cursor.rest})
     end
     
     def list_iterator(start=0)
@@ -799,30 +790,6 @@ module Containers
     end
   end    
 
-  class SinglyLinkedListIterator < MutableCollectionIterator
-    def initialize(collection)
-      super(collection)
-      if collection.is_a?(SinglyLinkedList)
-        @cursor = @collection.store
-      else
-        @cursor = @collection.front
-      end
-    end
-
-    private
-    def do_do_current
-      @cursor.first
-    end
-
-    def do_done?
-      @cursor.nil?
-    end
-
-    def do_next
-      @cursor = @cursor.rest unless done?
-    end
-  end
-
   class Dcons
     attr_accessor :content, :pred, :succ
 
@@ -900,9 +867,10 @@ module Containers
     attr_reader :node
     attr_accessor :index # ???? Needed for add_before???
 
-    def initialize(list)
-      @list = list
-      @node = @list.store # Always empty at this point???
+    def initialize(head_node:, size:)
+      @head_node = head_node
+      @size = size
+      @node = @head_node.call
       @index = 0
     end
 
@@ -915,12 +883,12 @@ module Containers
     end
 
     def end?
-      !initialized?  ||  @index == @list.size - 1
+      !initialized?  ||  @index == @size.call - 1
     end
 
     def reset
       @index = 0
-      @node = @list.store
+      @node = @head_node.call
     end
       
     def advance(step=1)
@@ -959,7 +927,7 @@ module Containers
         @node = @node.succ
       end
 
-      @index = @index % @list.size
+      @index = @index % @size.call
     end
 
     def do_rewind(step)
@@ -969,7 +937,7 @@ module Containers
         @node = @node.pred
       end
 
-      @index = @index % @list.size
+      @index = @index % @size.call
     end
 
     def do_bump
@@ -988,7 +956,7 @@ module Containers
       super(type, fill_elt)
       @store = nil
       @count = 0
-      @cursor = Dcursor.new(self)
+      @cursor = Dcursor.new(head_node: ->() {@store}, size: ->() {@count})
     end
     
     def size
@@ -1001,6 +969,16 @@ module Containers
     
     def iterator
       DoublyLinkedListIterator.new(self)
+    end
+
+    def iterator
+      cursor = Dcursor.new(head_node: ->() {@store}, size: ->() {@count})
+      sealed_for_your_protection = true
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    done: ->() {!cursor.initialized? ||
+                                                (!sealed_for_your_protection && cursor.start?)},
+                                    current: ->() {cursor.node.content}, # ???
+                                    advance: ->() {cursor.advance; sealed_for_your_protection = false})
     end
 
     def list_iterator(start=0)
@@ -1288,37 +1266,6 @@ module Containers
     end
   end
 
-  class DoublyLinkedListIterator < MutableCollectionIterator
-    def initialize(collection)
-      super(collection)
-      @cursor = Dcursor.new(collection)
-      @sealed_for_your_protection = true
-    end
-
-    private
-    def do_next
-      if done?
-        nil
-      else
-        @cursor.advance
-        @sealed_for_your_protection = false
-        if done?
-          nil
-        else
-          current
-        end
-      end
-    end
-
-    def do_done?
-      !@cursor.initialized?  ||  (!@sealed_for_your_protection && @cursor.start?)
-    end
-
-    def do_do_current
-      @cursor.node.content
-    end
-  end
-
   class HashList < MutableList
     def initialize(type=Object, fill_elt=nil)
       super(type, fill_elt)
@@ -1334,7 +1281,11 @@ module Containers
     end
 
     def iterator
-      RandomAccessListIterator.new(self)
+      cursor = 0
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    done: ->() {cursor == size},
+                                    current: ->() {get(cursor)},
+                                    advance: ->() {cursor += 1})
     end
     
     def list_iterator(start=0)
@@ -1470,7 +1421,9 @@ module Containers
     end
 
     def iterator
-      PersistentListIterator.new(self)
+      PersistentCollectionIterator.new(done: ->() {empty?},
+                                       current: ->() {get(0)},
+                                       advance: ->() {delete(0).iterator})
     end
     
     def list_iterator(start=0)
@@ -1603,29 +1556,6 @@ module Containers
     
     def do_index(obj, test)
       Node.index(@store, obj, test: test)
-    end
-  end
-
-  class PersistentListIterator < Iterator
-    def initialize(collection)
-      @collection = collection
-    end
-
-    def next
-      if done?
-        self
-      else
-        @collection.delete(0).iterator
-      end
-    end
-
-    def done?
-      @collection.empty?
-    end
-
-    private
-    def do_current
-      @collection.get(0)
     end
   end
 

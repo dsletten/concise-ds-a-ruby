@@ -243,65 +243,79 @@ module Containers
   end
 
   class Iterator
+    def initialize(done:, current:, advance:)
+      @done = done
+      @current = current
+      @advance = advance
+    end
+
+    def done?
+      @done.call
+    end
+
     def current
       raise StandardError.new("Iteration already finished.") if done?
-      do_current
+      @current.call
     end
 
     def next
-      raise NoMethodError, "#{self.class} does not implement next()"
-    end
-    
-    def done?
-      raise NoMethodError, "#{self.class} does not implement done?()"
-    end
+      if done?
+        nil
+      else
+        @advance.call
 
-    private
-    def do_current
-      raise NoMethodError, "#{self.class} does not implement do_current()"
+        if done?
+          nil
+        else
+          current
+        end
+      end
     end
   end
 
   class MutableCollectionIterator < Iterator
-    def initialize(collection)
-      @collection = collection
-      @expected_modification_count = @collection.modification_count
+    def initialize(done:, current:, advance:, modification_count:)
+      super(done: done, current: current, advance: advance)
+      @modification_count = modification_count
+      @expected_modification_count = @modification_count.call
     end
 
     def done?
       check_comodification
-      do_done?
+      super
     end
 
     def next
       check_comodification
-      do_next
+      super
     end
 
     private
     def comodified?
-      @expected_modification_count != @collection.modification_count
+      @expected_modification_count != @modification_count.call
     end
 
     def check_comodification
       raise StandardError.new("Iterator invalid due to structural modification of collection.") if comodified?
     end
     
-    def do_done?
-      raise NoMethodError, "#{self.class} does not implement do_done?()"
-    end
-
-    def do_next
-      raise NoMethodError, "#{self.class} does not implement do_next()"
-    end
-
     def do_current
       check_comodification
-      do_do_current #?!?!?!
+      super
+    end
+  end
+
+  class PersistentCollectionIterator < Iterator
+    def initialize(done:, current:, advance:)
+      super(done: done, current: current, advance: advance)
     end
 
-    def do_do_current
-      raise NoMethodError, "#{self.class} does not implement do_do_current()"
+    def next
+      if done?
+        self
+      else
+        @advance.call
+      end
     end
   end
 end
