@@ -250,19 +250,20 @@ module Containers
     end
 
     def done?
-      @done.call
+      check_done
     end
 
     def current
       raise StandardError.new("Iteration already finished.") if done?
-      @current.call
+
+      current_element
     end
 
     def next
       if done?
         nil
       else
-        @advance.call
+        next_element
 
         if done?
           nil
@@ -271,6 +272,19 @@ module Containers
         end
       end
     end
+
+    private
+    def check_done
+      @done.call
+    end
+
+    def current_element
+      @current.call
+    end
+
+    def next_element
+      @advance.call
+    end
   end
 
   class MutableCollectionIterator < Iterator
@@ -278,16 +292,6 @@ module Containers
       super(done: done, current: current, advance: advance)
       @modification_count = modification_count
       @expected_modification_count = @modification_count.call
-    end
-
-    def done?
-      check_comodification
-      super
-    end
-
-    def next
-      check_comodification
-      super
     end
 
     private
@@ -299,7 +303,17 @@ module Containers
       raise StandardError.new("Iterator invalid due to structural modification of collection.") if comodified?
     end
     
-    def do_current
+    def check_done
+      check_comodification
+      super
+    end
+
+    def current_element
+      check_comodification
+      super
+    end
+
+    def next_element
       check_comodification
       super
     end

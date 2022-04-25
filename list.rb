@@ -24,6 +24,16 @@
 #    
 
 module Containers
+  class RemoteControl
+    def initialize(interface)
+      @interface = interface
+    end
+
+    def press(method, *args)
+      @interface[method].call(*args)
+    end
+  end
+  
   class List < Collection
     attr_reader :fill_elt
     
@@ -295,7 +305,7 @@ module Containers
 
     def delete_node(node)
       raise ArgumentError.new("Invalid node") if node.nil?
-      dooomed = do_delete_node(node)
+      doomed = do_delete_node(node)
       count_modification
 
       doomed
@@ -350,7 +360,11 @@ module Containers
     end
     
     def list_iterator(start=0)
-      RandomAccessListListIterator.new(self, start)
+      RandomAccessListListIterator.new(list: self,
+                                       start: start,
+                                       remote_control:
+                                         RemoteControl.new({:modification_count =>
+                                                            ->() {@modification_count}}))
     end
     
     private
@@ -510,7 +524,7 @@ module Containers
   # end
 
   class SinglyLinkedList < MutableLinkedList
-    attr_reader :store
+#    attr_reader :store
 
     def initialize(type=Object, fill_elt=nil)
       super(type, fill_elt)
@@ -535,7 +549,13 @@ module Containers
     end
     
     def list_iterator(start=0)
-      SinglyLinkedListListIterator.new(self, start)
+      SinglyLinkedListListIterator.new(list: self,
+                                       start: start,
+                                       remote_control:
+                                         RemoteControl.new({:modification_count =>
+                                                            ->() {@modification_count},
+                                                            :head_node =>
+                                                            ->() {@store}}))
     end
 
     private
@@ -637,7 +657,7 @@ module Containers
   end    
 
   class SinglyLinkedListX < MutableLinkedList
-    attr_reader :front
+#    attr_reader :front
 
     def initialize(type=Object, fill_elt=nil)
       super(type, fill_elt)
@@ -663,7 +683,13 @@ module Containers
     end
     
     def list_iterator(start=0)
-      SinglyLinkedListListIterator.new(self, start)  # !!!!!!!!!!!!!!!!!
+      SinglyLinkedListListIterator.new(list: self,
+                                       start: start,
+                                       remote_control:
+                                         RemoteControl.new({:modification_count =>
+                                                            ->() {@modification_count},
+                                                            :head_node =>
+                                                            ->() {@front}}))
     end
 
     private
@@ -865,12 +891,12 @@ module Containers
   class Dcursor
 #    protected ?!
     attr_reader :node
-    attr_accessor :index # ???? Needed for add_before???
+#    attr_accessor :index # ???? Needed for add_before??? 
+    attr_reader :index # current_index
 
-    def initialize(head_node:, size:)
-      @head_node = head_node
-      @size = size
-      @node = @head_node.call
+    def initialize(remote_control)
+      @remote_control = remote_control
+      @node = @remote_control.press(:head_node)
       @index = 0
     end
 
@@ -883,12 +909,12 @@ module Containers
     end
 
     def end?
-      !initialized?  ||  @index == @size.call - 1
+      !initialized?  ||  @index == @remote_control.press(:size) - 1
     end
 
     def reset
       @index = 0
-      @node = @head_node.call
+      @node = @remote_control.press(:head_node)
     end
       
     def advance(step=1)
@@ -908,12 +934,20 @@ module Containers
     end
 
     #
-    #    Nudge cursor to next node without advancing index.
+    #    Bump cursor to next node without advancing index.
     #    Used when removing node.
     #    
     def bump
       if initialized?
         do_bump
+      else
+        raise StandardError.new("Cursor has not been initialized.")
+      end
+    end
+
+    def nudge
+      if initialized?
+        do_nudge
       else
         raise StandardError.new("Cursor has not been initialized.")
       end
@@ -927,7 +961,7 @@ module Containers
         @node = @node.succ
       end
 
-      @index = @index % @size.call
+      @index = @index % @remote_control.press(:size)
     end
 
     def do_rewind(step)
@@ -937,11 +971,15 @@ module Containers
         @node = @node.pred
       end
 
-      @index = @index % @size.call
+      @index = @index % @remote_control.press(:size)
     end
 
     def do_bump
       @node = @node.succ
+    end
+
+    def do_nudge
+      @index += 1
     end
   end
 
@@ -950,13 +988,13 @@ module Containers
   #    
   class DoublyLinkedList < MutableLinkedList
 #    protected
-    attr_reader :store
+#    attr_reader :store
     
     def initialize(type=Object, fill_elt=nil)
       super(type, fill_elt)
       @store = nil
       @count = 0
-      @cursor = Dcursor.new(head_node: ->() {@store}, size: ->() {@count})
+      @cursor = setup_cursor
     end
     
     def size
@@ -968,11 +1006,7 @@ module Containers
     end
     
     def iterator
-      DoublyLinkedListIterator.new(self)
-    end
-
-    def iterator
-      cursor = Dcursor.new(head_node: ->() {@store}, size: ->() {@count})
+      cursor = setup_cursor
       sealed_for_your_protection = true
       MutableCollectionIterator.new(modification_count: ->() {@modification_count},
                                     done: ->() {!cursor.initialized? ||
@@ -982,13 +1016,24 @@ module Containers
     end
 
     def list_iterator(start=0)
-      DoublyLinkedListListIterator.new(self, start)
+      DoublyLinkedListListIterator.new(list: self,
+                                       start: start,
+                                       remote_control:
+                                         RemoteControl.new({:modification_count =>
+                                                            ->() {@modification_count},
+                                                            :initialize =>
+                                                            ->() {setup_cursor}}))
     end
 
 #    protected
 #    attr_reader :head, :cursor
 
     private
+    def setup_cursor
+      Dcursor.new(RemoteControl.new({:head_node => ->() {@store},
+                                     :size => ->() {@count}}))
+    end
+
     # def clear
     #   @store = nil # Memory leak?!
     #   @count = 0
@@ -1289,7 +1334,11 @@ module Containers
     end
     
     def list_iterator(start=0)
-      RandomAccessListListIterator.new(self, start)
+      RandomAccessListListIterator.new(list: self,
+                                       start: start,
+                                       remote_control:
+                                         RemoteControl.new({:modification_count =>
+                                                            ->() {@modification_count}}))
     end
     
     private
@@ -1427,7 +1476,10 @@ module Containers
     end
     
     def list_iterator(start=0)
-      PersistentListListIterator.new(self, start)
+      PersistentListListIterator.new(list: self,
+                                     start: start,
+                                     remote_control:
+                                       RemoteControl.new({:head_node => ->() {@store}}))
     end
 
     def delete(i)
@@ -1560,8 +1612,9 @@ module Containers
   end
 
   class ListIterator
-    def initialize(list)
+    def initialize(list:, remote_control:)
       @list = list
+      @remote_control = remote_control
     end
     
     def type
@@ -1657,9 +1710,9 @@ module Containers
   end
 
   class MutableListListIterator < ListIterator
-    def initialize(list)
-      super(list)
-      @expected_modification_count = @list.modification_count
+    def initialize(list:, remote_control:)
+      super(list: list, remote_control: remote_control)
+      @expected_modification_count = @remote_control.press(:modification_count)
     end
     
     def count_modification
@@ -1680,7 +1733,7 @@ module Containers
 
     private
     def comodified?
-      @expected_modification_count != @list.modification_count
+      @expected_modification_count != @remote_control.press(:modification_count)
     end
 
     def check_comodification
@@ -1785,8 +1838,8 @@ module Containers
   end
 
   class RandomAccessListListIterator < MutableListListIterator
-    def initialize(list, start=0)
-      super(list)
+    def initialize(list:, remote_control:, start:)
+      super(list: list, remote_control: remote_control)
 
       if start < 0 
         raise ArgumentError.new("Invalid index: #{start}")
@@ -1866,9 +1919,9 @@ module Containers
   end
 
   class SinglyLinkedListListIterator < MutableListListIterator
-    def initialize(list, start=0)
-      super(list)
-      @cursor = @list.store
+    def initialize(list:, remote_control:, start:)
+      super(list: list, remote_control: remote_control)
+      @cursor = initialize_cursor
       @index = 0
       @history = LinkedStack.new
 
@@ -1883,7 +1936,7 @@ module Containers
 
     private
     def initialize_cursor
-      @cursor = @list.store
+      @cursor = @remote_control.press(:head_node)
     end
 
     def do_has_next?
@@ -1891,7 +1944,7 @@ module Containers
     end
 
     def do_has_previous?
-      !(@cursor.nil?  ||  @cursor == @list.store)
+      !(@cursor.nil?  ||  @cursor == @remote_control.press(:head_node))
     end
 
     def do_do_current
@@ -1968,11 +2021,11 @@ module Containers
   end
 
   class DoublyLinkedListListIterator < MutableListListIterator
-    def initialize(list, start=0)
-      super(list)
+    def initialize(list:, remote_control:, start:)
+      super(list: list, remote_control: remote_control)
       raise ArgumentError.new("Invalid index: #{start}") if start < 0 
 
-      @cursor = Dcursor.new(list)
+      @cursor = @remote_control.press(:initialize)
       @cursor.advance([start, list.size - 1].min) unless start.zero?
     end
 
@@ -2038,7 +2091,7 @@ module Containers
         @cursor.reset
       else
         @list.insert_before(@cursor.node, obj)
-        @cursor.index += 1
+        @cursor.nudge
       end
     end
 
@@ -2053,9 +2106,10 @@ module Containers
   end
 
   class PersistentListListIterator < ListIterator
-    def initialize(list, start=0)
+    def initialize(list:, remote_control:, start:)
+      super(list: list, remote_control: remote_control)
       @list = list
-      @cursor = @list.store
+      @cursor = @remote_control.press(:head_node)
       @index = 0
       @history = PersistentStack.new
 
@@ -2079,7 +2133,7 @@ module Containers
 
     protected
     def initialize_iterator(index, cursor, history)
-      iterator = PersistentListListIterator.new(@list)
+      iterator = PersistentListListIterator.new(list: @list, remote_control: @remote_control, start: 0) #??
       iterator.cursor = cursor
       iterator.index = index
       iterator.history = history
