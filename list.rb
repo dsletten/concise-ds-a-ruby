@@ -356,7 +356,7 @@ module Containers
   end
 
   class ArrayList < MutableList
-    def initialize(type=Object, fill_elt=nil)
+    def initialize(type: Object, fill_elt: nil)
       super(type, fill_elt)
       @store = []
     end
@@ -452,7 +452,7 @@ module Containers
     #    vs. Array#slice => nil
     #    
     def do_slice(i, n)
-      list = ArrayList.new(type, fill_elt)
+      list = ArrayList.new(type: type, fill_elt: fill_elt)
       list.add(*(@store[i, n])) # Compare Common Lisp version to calculate what to add!
       list
     end
@@ -553,7 +553,7 @@ module Containers
   class SinglyLinkedList < MutableLinkedList
 #    attr_reader :store
 
-    def initialize(type=Object, fill_elt=nil)
+    def initialize(type: Object, fill_elt: nil)
       super(type, fill_elt)
       @store = nil
       @count = 0
@@ -675,7 +675,7 @@ module Containers
     #    vs. Array#slice => nil
     #    
     def do_slice(i, n)
-      list = SinglyLinkedList.new(type, fill_elt)
+      list = SinglyLinkedList.new(type: type, fill_elt: fill_elt)
       start = [i, @count].min
       m = [i+n, @count].min - start
       slice = Node.slice(@store, start, m)
@@ -686,7 +686,7 @@ module Containers
   end    
 
   class SinglyLinkedListX < MutableLinkedList
-    def initialize(type=Object, fill_elt=nil)
+    def initialize(type: Object, fill_elt: nil)
       super(type, fill_elt)
       @front = nil
       @rear = nil
@@ -835,7 +835,7 @@ module Containers
     #    vs. Array#slice => nil
     #    
     def do_slice(i, n)
-      list = SinglyLinkedListX.new(type, fill_elt)
+      list = SinglyLinkedListX.new(type: type, fill_elt: fill_elt)
       start = [i, @count].min
       m = [i+n, @count].min - start
       slice = Node.slice(@front, start, m)
@@ -1019,9 +1019,9 @@ module Containers
 #    attr_accessor :index # ???? Needed for add_before??? 
     attr_reader :index # current_index
 
-    def initialize(head:, size:)
-      super(head: head, size: size)
-    end
+    # def initialize(head:, size:)
+    #   super(head: head, size: size)
+    # end
 
     private
     def do_advance(step)
@@ -1056,7 +1056,7 @@ module Containers
 #    protected
 #    attr_reader :store
     
-    def initialize(type=Object, fill_elt=nil)
+    def initialize(type: Object, fill_elt: nil)
       super(type, fill_elt)
       @store = nil
       @count = 0
@@ -1098,7 +1098,7 @@ module Containers
 
     private
     def setup_cursor
-      Dcursor.new(:head => ->() {@store}, :size => ->() {@count})
+      Dcursor.new(head: ->() {@store}, size: ->() {@count})
     end
 
     # def clear
@@ -1220,12 +1220,12 @@ module Containers
         tail.link(dcons)
       end
       
-      add_nodes(@store, dcons, elts)
+      add_nodes(dcons, elts)
 
       @cursor.reset unless @cursor.initialized?
     end
 
-    def add_nodes(head, start, elts)
+    def add_nodes(start, elts)
       dcons = start
       i = 1
       elts.each do |elt|
@@ -1233,7 +1233,7 @@ module Containers
         dcons = dcons.succ
         i += 1
       end
-      dcons.link(head)
+      dcons.link(@store)
       @count += i
     end
 
@@ -1386,31 +1386,22 @@ module Containers
     #    vs. Array#slice => nil
     #    
     def do_slice(i, n)
-      list = DoublyLinkedList.new(type, fill_elt)
+      list = make_empty_list
       slice = subseq([i, @count].min, [i+n, @count].min)
 
       list.add(*slice)
       list
     end
+
+    def make_empty_list
+      DoublyLinkedList.new(type: type, fill_elt: fill_elt)
+    end
   end
 
   class DoublyLinkedListRatchet < DoublyLinkedList
-    def initialize(type=Object, fill_elt=nil, direction: :forward)
+    def initialize(type: Object, fill_elt: nil, direction: :forward)
       @direction = direction
-      super(type, fill_elt) # Out of order?!?
-    end
-
-    def do_reverse
-      case @direction
-      when :forward then @direction = :backward
-      when :backward then @direction = :forward
-      end
-
-      unless empty?
-        @store = ratchet_forward(@store)
-      end
-
-      @cursor = setup_cursor
+      super(type: type, fill_elt: fill_elt) # super() call out of order?!?
     end
 
     private
@@ -1454,9 +1445,9 @@ module Containers
     def setup_cursor
       case @direction
       when :forward
-        Dcursor.new(:head => ->() {@store},:size => ->() {@count})
+        Dcursor.new(head: ->() {@store}, size: ->() {@count})
       when :backward
-        DcursorB.new(:head => ->() {@store}, :size => ->() {@count})
+        DcursorB.new(head: ->() {@store}, size: ->() {@count})
       end
     end
 
@@ -1560,28 +1551,33 @@ module Containers
         dcons = nth_dcons(i)
         (i...j).each do
           result << dcons.content
-          dcons = dcons.succ
+          dcons = ratchet_forward(dcons)
         end
       end
 
       result
     end
 
-    #
-    #    Returns empty DoublyLinkedList if negative i is too far
-    #    vs. Array#slice => nil
-    #    
-    def do_slice(i, n)
-      list = DoublyLinkedList.new(type, fill_elt)
-      slice = subseq([i, @count].min, [i+n, @count].min)
+    def make_empty_list
+      DoublyLinkedListRatchet.new(type: type, fill_elt: fill_elt, direction: @direction)
+    end
 
-      list.add(*slice)
-      list
+    def do_reverse
+      case @direction
+      when :forward then @direction = :backward
+      when :backward then @direction = :forward
+      end
+
+      unless empty?
+        @store = ratchet_forward(@store)
+      end
+
+      @cursor = setup_cursor
     end
   end
 
   class HashList < MutableList
-    def initialize(type=Object, fill_elt=nil)
+    def initialize(type: Object, fill_elt: nil)
       super(type, fill_elt)
       @store = {}
     end
@@ -1673,7 +1669,7 @@ module Containers
     # end
 
     def do_slice(i, n)
-      list = HashList.new(type, fill_elt)
+      list = HashList.new(type: type, fill_elt: fill_elt)
 
       low = [i, size].min
       high = [i+n, size].min
@@ -1691,7 +1687,7 @@ module Containers
   class PersistentList < List
     attr_reader :store
 
-    def initialize(type=Object, fill_elt=nil)
+    def initialize(type: Object, fill_elt: nil)
       super(type, fill_elt)
       @store = nil
       @count = 0
@@ -1738,7 +1734,7 @@ module Containers
     end
 
     def clear
-      PersistentList.new(@type, @fill_elt)
+      PersistentList.new(type: @type, fill_elt: @fill_elt)
     end
 
     # def iterator
@@ -1778,7 +1774,7 @@ module Containers
 
     private
     def initialize_list(store, count)
-      list = PersistentList.new(@type, @fill_elt)
+      list = PersistentList.new(type: @type, fill_elt: @fill_elt)
       list.store = store
       list.count = count
       list
