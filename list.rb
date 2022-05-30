@@ -24,16 +24,6 @@
 #    
 
 module Containers
-  class RemoteControl
-    def initialize(interface)
-      @interface = interface
-    end
-
-    def press(method, *args)
-      @interface[method].call(*args)
-    end
-  end
-  
   class List < Collection
     attr_reader :fill_elt
     
@@ -57,6 +47,9 @@ module Containers
       result << ")"
     end
 
+    #
+    #    `list` is a list? Problem with other collection types??
+    #    
     def equals(list, test: ->(x, y) {x == y})
       if list.is_a?(PersistentList) # ???????????????????????
         list.equals(self, test: ->(x, y) { test.call(y, x) })
@@ -188,6 +181,10 @@ module Containers
       end
     end
 
+    def reverse
+      raise NoMethodError, "#{self.class} does not implement reverse()"
+    end
+    
     private
     def do_add(objs)
       raise NoMethodError, "#{self.class} does not implement do_add()"
@@ -215,7 +212,17 @@ module Containers
     end
 
     def do_index(obj, test)
-      raise NoMethodError, "#{self.class} does not implement do_index()"
+      i = iterator
+      j = 0
+
+      until i.done?
+        elt = i.current
+        return j if test.call(obj, elt)
+        i.next
+        j += 1
+      end
+
+      return nil
     end
 
     def do_slice(i, n)
@@ -232,8 +239,13 @@ module Containers
     end
 
     def clear
-      count_modification
       do_clear
+      count_modification
+    end
+
+    def reverse
+      do_reverse
+      count_modification
     end
 
     private
@@ -245,21 +257,27 @@ module Containers
       raise NoMethodError, "#{self.class} does not implement do_clear()"
     end
 
+    def do_reverse
+      raise NoMethodError, "#{self.class} does not implement do_reverse()"
+    end
+
     def do_add(objs)
       unless objs.empty?
-        count_modification
         do_do_add(objs)
+        count_modification
       end
     end
 
     def do_insert(i, obj)
-      count_modification
       do_do_insert(i, obj)
+      count_modification
     end
 
     def do_delete(i)
+      doomed = do_do_delete(i)
       count_modification
-      do_do_delete(i)
+
+      doomed
     end
 
     def do_do_add(objs)
@@ -351,20 +369,29 @@ module Containers
       @store.empty?
     end
 
+    # def iterator
+    #   cursor = 0
+    #   MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+    #                                 done: ->() {cursor == size},
+    #                                 current: ->() {get(cursor)},
+    #                                 advance: ->() {cursor += 1})
+    # end
+    # def iterator
+    #   cursor = 0
+    #   MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+    #                                 cursor: Cursor.new(done: ->() {cursor == size},
+    #                                                    current: ->() {get(cursor)},
+    #                                                    advance: ->() {cursor += 1}))
+    # end
     def iterator
-      cursor = 0
       MutableCollectionIterator.new(modification_count: ->() {@modification_count},
-                                    done: ->() {cursor == size},
-                                    current: ->() {get(cursor)},
-                                    advance: ->() {cursor += 1})
+                                    cursor: Cursor.make_random_access_list_cursor(self))
     end
     
     def list_iterator(start=0)
       RandomAccessListListIterator.new(list: self,
                                        start: start,
-                                       remote_control:
-                                         RemoteControl.new({:modification_count =>
-                                                            ->() {@modification_count}}))
+                                       modification_count: ->() {@modification_count})
     end
     
     private
@@ -540,22 +567,24 @@ module Containers
       @store.nil?
     end
 
+    # def iterator
+    #   cursor = @store
+    #   MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+    #                                 done: ->() {cursor.nil?},
+    #                                 current: ->() {cursor.first},
+    #                                 advance: ->() {cursor = cursor.rest})
+    # end
+
     def iterator
-      cursor = @store
       MutableCollectionIterator.new(modification_count: ->() {@modification_count},
-                                    done: ->() {cursor.nil?},
-                                    current: ->() {cursor.first},
-                                    advance: ->() {cursor = cursor.rest})
+                                    cursor: Cursor.make_singly_linked_list_cursor(@store))
     end
-    
+
     def list_iterator(start=0)
       SinglyLinkedListListIterator.new(list: self,
                                        start: start,
-                                       remote_control:
-                                         RemoteControl.new({:modification_count =>
-                                                            ->() {@modification_count},
-                                                            :head_node =>
-                                                            ->() {@store}}))
+                                       modification_count: ->() {@modification_count},
+                                       head: ->() {@store})
     end
 
     private
@@ -657,8 +686,6 @@ module Containers
   end    
 
   class SinglyLinkedListX < MutableLinkedList
-#    attr_reader :front
-
     def initialize(type=Object, fill_elt=nil)
       super(type, fill_elt)
       @front = nil
@@ -674,22 +701,24 @@ module Containers
       @front.nil?
     end
 
-    def iterator
-      cursor = @front
-      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
-                                    done: ->() {cursor.nil?},
-                                    current: ->() {cursor.first},
-                                    advance: ->() {cursor = cursor.rest})
-    end
+    # def iterator
+    #   cursor = @front
+    #   MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+    #                                 done: ->() {cursor.nil?},
+    #                                 current: ->() {cursor.first},
+    #                                 advance: ->() {cursor = cursor.rest})
+    # end
     
+    def iterator
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    cursor: Cursor.make_singly_linked_list_cursor(@front))
+    end
+
     def list_iterator(start=0)
       SinglyLinkedListListIterator.new(list: self,
                                        start: start,
-                                       remote_control:
-                                         RemoteControl.new({:modification_count =>
-                                                            ->() {@modification_count},
-                                                            :head_node =>
-                                                            ->() {@front}}))
+                                       modification_count: ->() {@modification_count},
+                                       head: ->() {@store})
     end
 
     private
@@ -894,9 +923,10 @@ module Containers
 #    attr_accessor :index # ???? Needed for add_before??? 
     attr_reader :index # current_index
 
-    def initialize(remote_control)
-      @remote_control = remote_control
-      @node = @remote_control.press(:head_node)
+    def initialize(head:, size:)
+      @head = head
+      @size = size
+      @node = @head.call
       @index = 0
     end
 
@@ -909,12 +939,12 @@ module Containers
     end
 
     def end?
-      !initialized?  ||  @index == @remote_control.press(:size) - 1
+      !initialized?  ||  @index == @size.call - 1
     end
 
     def reset
       @index = 0
-      @node = @remote_control.press(:head_node)
+      @node = @head.call
     end
       
     def advance(step=1)
@@ -961,7 +991,7 @@ module Containers
         @node = @node.succ
       end
 
-      @index = @index % @remote_control.press(:size)
+      @index = @index % @size.call
     end
 
     def do_rewind(step)
@@ -971,7 +1001,7 @@ module Containers
         @node = @node.pred
       end
 
-      @index = @index % @remote_control.press(:size)
+      @index = @index % @size.call
     end
 
     def do_bump
@@ -980,6 +1010,42 @@ module Containers
 
     def do_nudge
       @index += 1
+    end
+  end
+
+  class DcursorB < Dcursor
+#    protected ?!
+    attr_reader :node
+#    attr_accessor :index # ???? Needed for add_before??? 
+    attr_reader :index # current_index
+
+    def initialize(head:, size:)
+      super(head: head, size: size)
+    end
+
+    private
+    def do_advance(step)
+      raise ArgumentError.new("Step must be a positive value: #{step}") if step <= 0
+      step.times do
+        @index += 1
+        @node = @node.pred
+      end
+
+      @index = @index % @size.call
+    end
+
+    def do_rewind(step)
+      raise ArgumentError.new("Step must be a positive value: #{step}") if step <= 0
+      step.times do
+        @index -= 1
+        @node = @node.succ
+      end
+
+      @index = @index % @size.call
+    end
+
+    def do_bump
+      @node = @node.pred
     end
   end
 
@@ -1005,24 +1071,26 @@ module Containers
       @store.nil?
     end
     
+    # def iterator
+    #   cursor = setup_cursor
+    #   sealed_for_your_protection = true
+    #   MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+    #                                 done: ->() {!cursor.initialized? ||
+    #                                             (!sealed_for_your_protection && cursor.start?)},
+    #                                 current: ->() {cursor.node.content}, # ???
+    #                                 advance: ->() {cursor.advance; sealed_for_your_protection = false})
+    # end
+
     def iterator
-      cursor = setup_cursor
-      sealed_for_your_protection = true
       MutableCollectionIterator.new(modification_count: ->() {@modification_count},
-                                    done: ->() {!cursor.initialized? ||
-                                                (!sealed_for_your_protection && cursor.start?)},
-                                    current: ->() {cursor.node.content}, # ???
-                                    advance: ->() {cursor.advance; sealed_for_your_protection = false})
+                                    cursor: Cursor.make_doubly_linked_list_cursor(setup_cursor))
     end
 
     def list_iterator(start=0)
       DoublyLinkedListListIterator.new(list: self,
                                        start: start,
-                                       remote_control:
-                                         RemoteControl.new({:modification_count =>
-                                                            ->() {@modification_count},
-                                                            :initialize =>
-                                                            ->() {setup_cursor}}))
+                                       modification_count: ->() {@modification_count},
+                                       init: ->() {setup_cursor})
     end
 
 #    protected
@@ -1030,8 +1098,7 @@ module Containers
 
     private
     def setup_cursor
-      Dcursor.new(RemoteControl.new({:head_node => ->() {@store},
-                                     :size => ->() {@count}}))
+      Dcursor.new(:head => ->() {@store}, :size => ->() {@count})
     end
 
     # def clear
@@ -1133,15 +1200,15 @@ module Containers
     #   return false
     # end
 
-    def do_contains?(obj, test)
-      dcons = @store
-      @count.times do
-        return dcons.content if test.call(obj, dcons.content)
-        dcons = dcons.succ
-      end
+    # def do_contains?(obj, test)
+    #   dcons = @store
+    #   @count.times do
+    #     return dcons.content if test.call(obj, dcons.content)
+    #     dcons = dcons.succ
+    #   end
 
-      return nil
-    end
+    #   return nil
+    # end
 
     def do_do_add(objs)
       elt, *elts = objs
@@ -1179,12 +1246,8 @@ module Containers
     end
 
     def do_do_insert(i, obj)
-      nth_dcons(i).splice_before(obj)
-
-      if i.zero?
-        @store = @store.pred
-      end
-
+      do_do_do_insert(i, obj) # Have to design ahead of time!!
+      
       @count += 1
 
       if !@cursor.initialized?  ||
@@ -1194,22 +1257,38 @@ module Containers
       end
     end
 
+    def do_do_do_insert(i, obj)
+      nth_dcons(i).splice_before(obj)
+
+      if i.zero?
+        @store = @store.pred
+      end
+    end
+
     def do_insert_before(node, obj)
+      do_do_insert_before(node, obj)
+      
+      @count += 1
+      @cursor.reset
+    end
+
+    def do_do_insert_before(node, obj)
       node.splice_before(obj)
 
       if node == @store
         @store = @store.pred
       end
-      
-      @count += 1
-#      @cursor.index += 1
-      @cursor.reset
-    end
+    end      
 
     def do_insert_after(node, obj)
-      node.splice_after(obj)
+      do_do_insert_after(node, obj)
+      
       @count += 1
       @cursor.reset
+    end
+    
+    def do_do_insert_after(node, obj)
+      node.splice_after(obj)
     end
     
     def do_do_delete(i)
@@ -1234,17 +1313,21 @@ module Containers
     #    This is not really needed for DoublyLinkedList.
     #    
     def do_delete_child(parent)
+      result = do_do_delete_child(parent)
+
+      @count -= 1
+      @cursor.reset
+      
+      result
+    end
+
+    def do_do_delete_child(parent)
       child = parent.succ
 
       if child == @store
         raise StandardError.new("Parent must have child node")
       else
-        result = parent.excise_child
-
-        @count -= 1
-        @cursor.reset
-      
-        result
+        parent.excise_child
       end
     end
 
@@ -1271,14 +1354,200 @@ module Containers
     #   return nil
     # end
 
-    def do_index(obj, test)
-      dcons = @store
-      @count.times do |i|
-        return i if test.call(obj, dcons.content)
-        dcons = dcons.succ
+    # def do_index(obj, test)
+    #   dcons = @store
+    #   @count.times do |i|
+    #     return i if test.call(obj, dcons.content)
+    #     dcons = dcons.succ
+    #   end
+
+    #   return nil
+    # end
+
+    #
+    #    Inclusive `i`, exclusive `j`
+    #    
+    def subseq(i, j)
+      result = []
+      
+      if i < j
+        dcons = nth_dcons(i)
+        (i...j).each do
+          result << dcons.content
+          dcons = dcons.succ
+        end
       end
 
-      return nil
+      result
+    end
+
+    #
+    #    Returns empty DoublyLinkedList if negative i is too far
+    #    vs. Array#slice => nil
+    #    
+    def do_slice(i, n)
+      list = DoublyLinkedList.new(type, fill_elt)
+      slice = subseq([i, @count].min, [i+n, @count].min)
+
+      list.add(*slice)
+      list
+    end
+  end
+
+  class DoublyLinkedListRatchet < DoublyLinkedList
+    def initialize(type=Object, fill_elt=nil, direction: :forward)
+      @direction = direction
+      super(type, fill_elt) # Out of order?!?
+    end
+
+    def do_reverse
+      case @direction
+      when :forward then @direction = :backward
+      when :backward then @direction = :forward
+      end
+
+      unless empty?
+        @store = ratchet_forward(@store)
+      end
+
+      @cursor = setup_cursor
+    end
+
+    private
+    def ratchet_forward(node)
+      case @direction
+      when :forward then node.succ
+      when :backward then node.pred
+      end
+    end
+
+#    def ratchet_forward=(node, obj)
+    def set_ratchet_forward(node, obj)
+      case @direction
+      when :forward then node.succ = obj
+      when :backward then node.pred = obj
+      end
+    end
+
+    def ratchet_backward(node)
+      case @direction
+      when :forward then node.pred
+      when :backward then node.succ
+      end
+    end
+
+#    def ratchet_backward=(node, obj)
+    def set_ratchet_backward(node, obj)
+      case @direction
+      when :forward then node.pred = obj
+      when :backward then node.succ = obj
+      end
+    end
+
+    def ratchet_dlink(node1, node2)
+      case @direction
+      when :forward then node1.link(node2)
+      when :backward then node2.link(node1)
+      end
+    end
+
+    def setup_cursor
+      case @direction
+      when :forward
+        Dcursor.new(:head => ->() {@store},:size => ->() {@count})
+      when :backward
+        DcursorB.new(:head => ->() {@store}, :size => ->() {@count})
+      end
+    end
+
+    def do_clear
+      unless empty?
+        dcons = @store
+        @count.times do
+          set_ratchet_backward(dcons, nil)
+          dcons = ratchet_forward(dcons)
+        end
+
+        set_ratchet_forward(@store, nil)
+        @store = nil
+        @count = 0
+        @cursor.reset
+      end
+    end
+
+    def do_do_add(objs)
+      elt, *elts = objs
+      dcons = Dcons.new(elt)
+      if empty?
+        @store = dcons
+      else
+        add_node_to_end(ratchet_backward(@store), dcons)
+      end
+      
+      add_nodes(dcons, elts)
+
+      @cursor.reset unless @cursor.initialized?
+    end
+
+    def add_node_to_end(previous_end, new_end)
+      ratchet_dlink(previous_end, new_end)
+    end
+    
+    def add_nodes(start, elts)
+      dcons = start
+      i = 1
+      elts.each do |elt|
+        add_node_to_end(dcons, (Dcons.new(elt)))
+        dcons = ratchet_forward(dcons)
+        i += 1
+      end
+      ratchet_dlink(dcons, @store)
+      @count += i
+    end
+
+    def do_do_do_insert(i, obj)
+      case @direction
+      when :forward then nth_dcons(i).splice_before(obj)
+      when :backward then nth_dcons(i).splice_after(obj)
+      end
+
+      if i.zero?
+        @store = ratchet_backward(@store)
+      end
+    end
+
+    def do_do_insert_before(node, obj)
+      case @direction
+      when :forward then node.splice_before(obj)
+      when :backward then node.splice_after(obj)
+      end
+
+      if node == @store
+        @store = ratchet_backward(@store)
+      end
+    end
+
+    def do_do_insert_after(node, obj)
+      case @direction
+      when :forward then node.splice_after(obj)
+      when :backward then node.splice_before(obj)
+      end
+    end
+    
+    #
+    #    This is not really needed for DoublyLinkedList.
+    #    
+    def do_do_delete_child(parent)
+      child = ratchet_forward(parent)
+
+      if child == @store
+        raise StandardError.new("Parent must have child node")
+      else
+        result = child.content
+        ratchet_dlink(parent, ratchet_forward(child))
+
+        result
+      end
     end
 
     #
@@ -1325,20 +1594,23 @@ module Containers
       @store.empty?
     end
 
-    def iterator
-      cursor = 0
-      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
-                                    done: ->() {cursor == size},
-                                    current: ->() {get(cursor)},
-                                    advance: ->() {cursor += 1})
-    end
+    # def iterator
+    #   cursor = 0
+    #   MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+    #                                 done: ->() {cursor == size},
+    #                                 current: ->() {get(cursor)},
+    #                                 advance: ->() {cursor += 1})
+    # end
     
+    def iterator
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    cursor: Cursor.make_random_access_list_cursor(self))
+    end
+
     def list_iterator(start=0)
       RandomAccessListListIterator.new(list: self,
                                        start: start,
-                                       remote_control:
-                                         RemoteControl.new({:modification_count =>
-                                                            ->() {@modification_count}}))
+                                       modification_count: ->() {@modification_count})
     end
     
     private
@@ -1346,16 +1618,16 @@ module Containers
       @store = {}
     end
 
-    def do_contains?(obj, test)
-      size.times do |i|
-        elt = get(i)
-        if test.call(obj, elt)
-          return elt
-        end
-      end
+    # def do_contains?(obj, test)
+    #   size.times do |i|
+    #     elt = get(i)
+    #     if test.call(obj, elt)
+    #       return elt
+    #     end
+    #   end
 
-      return nil
-    end
+    #   return nil
+    # end
 
     def do_do_add(objs)
       i = size
@@ -1390,15 +1662,15 @@ module Containers
       @store[i] = obj
     end
     
-    def do_index(obj, test)
-      size.times do |i|
-        if test.call(obj, get(i))
-          return i
-        end
-      end
+    # def do_index(obj, test)
+    #   size.times do |i|
+    #     if test.call(obj, get(i))
+    #       return i
+    #     end
+    #   end
 
-      return nil
-    end
+    #   return nil
+    # end
 
     def do_slice(i, n)
       list = HashList.new(type, fill_elt)
@@ -1469,17 +1741,18 @@ module Containers
       PersistentList.new(@type, @fill_elt)
     end
 
+    # def iterator
+    #   PersistentCollectionIterator.new(done: ->() {empty?},
+    #                                    current: ->() {get(0)},
+    #                                    advance: ->() {delete(0).iterator})
+    # end
+
     def iterator
-      PersistentCollectionIterator.new(done: ->() {empty?},
-                                       current: ->() {get(0)},
-                                       advance: ->() {delete(0).iterator})
+      PersistentCollectionIterator.new(Cursor.make_persistent_list_cursor(self))
     end
     
     def list_iterator(start=0)
-      PersistentListListIterator.new(list: self,
-                                     start: start,
-                                     remote_control:
-                                       RemoteControl.new({:head_node => ->() {@store}}))
+      PersistentListListIterator.new(list: self, start: start, head: @store)
     end
 
     def delete(i)
@@ -1612,9 +1885,8 @@ module Containers
   end
 
   class ListIterator
-    def initialize(list:, remote_control:)
+    def initialize(list)
       @list = list
-      @remote_control = remote_control
     end
     
     def type
@@ -1710,9 +1982,10 @@ module Containers
   end
 
   class MutableListListIterator < ListIterator
-    def initialize(list:, remote_control:)
-      super(list: list, remote_control: remote_control)
-      @expected_modification_count = @remote_control.press(:modification_count)
+    def initialize(list, modification_count)
+      super(list)
+      @modification_count = modification_count
+      @expected_modification_count = modification_count.call
     end
     
     def count_modification
@@ -1733,7 +2006,7 @@ module Containers
 
     private
     def comodified?
-      @expected_modification_count != @remote_control.press(:modification_count)
+      @expected_modification_count != @modification_count.call
     end
 
     def check_comodification
@@ -1838,8 +2111,8 @@ module Containers
   end
 
   class RandomAccessListListIterator < MutableListListIterator
-    def initialize(list:, remote_control:, start:)
-      super(list: list, remote_control: remote_control)
+    def initialize(list:, modification_count:, start: 0)
+      super(list, modification_count)
 
       if start < 0 
         raise ArgumentError.new("Invalid index: #{start}")
@@ -1919,8 +2192,9 @@ module Containers
   end
 
   class SinglyLinkedListListIterator < MutableListListIterator
-    def initialize(list:, remote_control:, start:)
-      super(list: list, remote_control: remote_control)
+    def initialize(list:, start: 0, modification_count:, head:)
+      super(list, modification_count)
+      @head = head
       @cursor = initialize_cursor
       @index = 0
       @history = LinkedStack.new
@@ -1936,7 +2210,7 @@ module Containers
 
     private
     def initialize_cursor
-      @cursor = @remote_control.press(:head_node)
+      @cursor = @head.call
     end
 
     def do_has_next?
@@ -1944,7 +2218,7 @@ module Containers
     end
 
     def do_has_previous?
-      !(@cursor.nil?  ||  @cursor == @remote_control.press(:head_node))
+      !(@cursor.nil?  ||  @cursor == @head.call)
     end
 
     def do_do_current
@@ -2021,11 +2295,12 @@ module Containers
   end
 
   class DoublyLinkedListListIterator < MutableListListIterator
-    def initialize(list:, remote_control:, start:)
-      super(list: list, remote_control: remote_control)
+    def initialize(list:, start: 0, modification_count:, init:)
+      super(list, modification_count)
       raise ArgumentError.new("Invalid index: #{start}") if start < 0 
 
-      @cursor = @remote_control.press(:initialize)
+      @init = init
+      @cursor = @init.call
       @cursor.advance([start, list.size - 1].min) unless start.zero?
     end
 
@@ -2106,10 +2381,9 @@ module Containers
   end
 
   class PersistentListListIterator < ListIterator
-    def initialize(list:, remote_control:, start:)
-      super(list: list, remote_control: remote_control)
-      @list = list
-      @cursor = @remote_control.press(:head_node)
+    def initialize(list:, start: 0, head:)
+      super(list)
+      @cursor = head
       @index = 0
       @history = PersistentStack.new
 
@@ -2133,8 +2407,7 @@ module Containers
 
     protected
     def initialize_iterator(index, cursor, history)
-      iterator = PersistentListListIterator.new(list: @list, remote_control: @remote_control, start: 0) #??
-      iterator.cursor = cursor
+      iterator = PersistentListListIterator.new(list: @list, start: 0, head: cursor)
       iterator.index = index
       iterator.history = history
       iterator

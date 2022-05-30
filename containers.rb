@@ -237,16 +237,68 @@ module Containers
     end
 
     private
-    def do_contains?(obj, test) 
-      raise NoMethodError, "#{self.class} does not implement do_contains?()"
+    def do_contains?(obj, test)
+      i = iterator
+
+      until i.done?
+        elt = i.current
+        return elt if test.call(obj, elt)
+        i.next
+      end
+
+      return nil
     end
   end
 
-  class Iterator
+  # class RemoteControl
+  #   def initialize(interface)
+  #     @interface = interface
+  #   end
+
+  #   def press(method, *args)
+  #     @interface[method].call(*args)
+  #   end
+  # end
+  
+  class Cursor
+    attr_reader :done, :current, :advance
     def initialize(done:, current:, advance:)
       @done = done
       @current = current
       @advance = advance
+    end
+
+    def self.make_random_access_list_cursor(list)
+      index = 0
+      Cursor.new(done: ->() {index == list.size},
+                 current: ->() {list.get(index)},
+                 advance: ->() {index += 1})
+    end
+
+    def self.make_singly_linked_list_cursor(node)
+      Cursor.new(done: ->() {node.nil?},
+                 current: ->() {node.first},
+                 advance: ->() {node = node.rest})
+    end
+
+    def self.make_doubly_linked_list_cursor(dcursor)
+      sealed_for_your_protection = true      
+      Cursor.new(done: ->() {!dcursor.initialized? ||
+                             (!sealed_for_your_protection && dcursor.start?)},
+                 current: ->() {dcursor.node.content}, # ???
+                 advance: ->() {dcursor.advance; sealed_for_your_protection = false})
+    end
+
+    def self.make_persistent_list_cursor(list)
+      Cursor.new(done: ->() {list.empty?},
+                 current: ->() {list.get(0)},
+                 advance: ->() {list.delete(0).iterator})
+    end
+  end
+  
+  class Iterator
+    def initialize(cursor)
+      @cursor = cursor
     end
 
     def done?
@@ -275,21 +327,21 @@ module Containers
 
     private
     def check_done
-      @done.call
+      @cursor.done.call
     end
 
     def current_element
-      @current.call
+      @cursor.current.call
     end
 
     def next_element
-      @advance.call
+      @cursor.advance.call
     end
   end
 
   class MutableCollectionIterator < Iterator
-    def initialize(done:, current:, advance:, modification_count:)
-      super(done: done, current: current, advance: advance)
+    def initialize(cursor:, modification_count:)
+      super(cursor)
       @modification_count = modification_count
       @expected_modification_count = @modification_count.call
     end
@@ -320,15 +372,15 @@ module Containers
   end
 
   class PersistentCollectionIterator < Iterator
-    def initialize(done:, current:, advance:)
-      super(done: done, current: current, advance: advance)
+    def initialize(cursor)
+      super(cursor)
     end
 
     def next
       if done?
         self
       else
-        @advance.call
+        @cursor.advance.call
       end
     end
   end
