@@ -226,7 +226,19 @@ module Containers
     end
 
     def do_slice(i, n)
-      raise NoMethodError, "#{self.class} does not implement do_slice()"
+      list = make_empty_list
+      list.add(*sublist([i, size].min, [i+n, size].min))
+
+      list
+    end
+
+    def sublist(m, n)
+      result = []
+      m.upto(n-1) do |i|
+        result << get(i)
+      end
+
+      result
     end
   end
 
@@ -321,12 +333,12 @@ module Containers
       end
     end
 
-    def delete_node(node)
-      raise ArgumentError.new("Invalid node") if node.nil?
-      doomed = do_delete_node(node)
+    def delete_node(doomed)
+      raise ArgumentError.new("Invalid node") if doomed.nil?
+      result = do_delete_node(doomed)
       count_modification
 
-      doomed
+      result
     end
 
     def delete_child(parent)
@@ -451,10 +463,18 @@ module Containers
     #    Returns empty ArrayList if negative i is too far
     #    vs. Array#slice => nil
     #    
-    def do_slice(i, n)
-      list = ArrayList.new(type: type, fill_elt: fill_elt)
-      list.add(*(@store[i, n])) # Compare Common Lisp version to calculate what to add!
-      list
+    # def do_slice(i, n)
+    #   list = ArrayList.new(type: type, fill_elt: fill_elt)
+    #   list.add(*(@store[i, n])) # Compare Common Lisp version to calculate what to add!
+    #   list
+    # end
+
+    def make_empty_list
+      ArrayList.new(type: type, fill_elt: fill_elt)
+    end
+
+    def sublist(m, n)
+      @store[m, n - m]
     end
   end
 
@@ -674,14 +694,22 @@ module Containers
     #    Returns empty SinglyLinkedList if negative i is too far
     #    vs. Array#slice => nil
     #    
-    def do_slice(i, n)
-      list = SinglyLinkedList.new(type: type, fill_elt: fill_elt)
-      start = [i, @count].min
-      m = [i+n, @count].min - start
-      slice = Node.slice(@store, start, m)
+    # def do_slice(i, n)
+    #   list = SinglyLinkedList.new(type: type, fill_elt: fill_elt)
+    #   start = [i, @count].min
+    #   m = [i+n, @count].min - start
+    #   slice = Node.slice(@store, start, m)
 
-      list.add(*slice)
-      list
+    #   list.add(*slice)
+    #   list
+    # end
+
+    def make_empty_list
+      SinglyLinkedList.new(type: type, fill_elt: fill_elt)
+    end
+
+    def sublist(m, n)
+      Node.slice(@store, m, n - m)
     end
   end    
 
@@ -834,14 +862,22 @@ module Containers
     #    Returns empty SinglyLinkedListX if negative i is too far
     #    vs. Array#slice => nil
     #    
-    def do_slice(i, n)
-      list = SinglyLinkedListX.new(type: type, fill_elt: fill_elt)
-      start = [i, @count].min
-      m = [i+n, @count].min - start
-      slice = Node.slice(@front, start, m)
+    # def do_slice(i, n)
+    #   list = SinglyLinkedListX.new(type: type, fill_elt: fill_elt)
+    #   start = [i, @count].min
+    #   m = [i+n, @count].min - start
+    #   slice = Node.slice(@front, start, m)
 
-      list.add(*slice)
-      list
+    #   list.add(*slice)
+    #   list
+    # end
+
+    def make_empty_list
+      SinglyLinkedListX.new(type: type, fill_elt: fill_elt)
+    end
+
+    def sublist(m, n)
+      Node.slice(@front, m, n - m)
     end
   end    
 
@@ -923,17 +959,24 @@ module Containers
 #    attr_accessor :index # ???? Needed for add_before??? 
     attr_reader :index # current_index
 
-    def initialize(head:, size:)
+    def initialize(head:, size:, pred:, succ:)
       @head = head
       @size = size
       @node = @head.call
       @index = 0
+      @succ = succ
+      @pred = pred
     end
 
     def initialized?
       !@node.nil?
     end
 
+    def reset
+      @index = 0
+      @node = @head.call
+    end
+      
     def start?
       !initialized?  ||  @index.zero?
     end
@@ -942,11 +985,6 @@ module Containers
       !initialized?  ||  @index == @size.call - 1
     end
 
-    def reset
-      @index = 0
-      @node = @head.call
-    end
-      
     def advance(step=1)
       if initialized?
         do_advance(step)
@@ -988,7 +1026,7 @@ module Containers
       raise ArgumentError.new("Step must be a positive value: #{step}") if step <= 0
       step.times do
         @index += 1
-        @node = @node.succ
+        @node = @succ.call(@node)
       end
 
       @index = @index % @size.call
@@ -998,14 +1036,14 @@ module Containers
       raise ArgumentError.new("Step must be a positive value: #{step}") if step <= 0
       step.times do
         @index -= 1
-        @node = @node.pred
+        @node = @pred.call(@node)
       end
 
       @index = @index % @size.call
     end
 
     def do_bump
-      @node = @node.succ
+      @node = @succ.call(@node)
     end
 
     def do_nudge
@@ -1014,21 +1052,12 @@ module Containers
   end
 
   class DcursorB < Dcursor
-#    protected ?!
-    attr_reader :node
-#    attr_accessor :index # ???? Needed for add_before??? 
-    attr_reader :index # current_index
-
-    # def initialize(head:, size:)
-    #   super(head: head, size: size)
-    # end
-
     private
     def do_advance(step)
       raise ArgumentError.new("Step must be a positive value: #{step}") if step <= 0
       step.times do
         @index += 1
-        @node = @node.pred
+        @node = @pred.call(@node)
       end
 
       @index = @index % @size.call
@@ -1038,29 +1067,165 @@ module Containers
       raise ArgumentError.new("Step must be a positive value: #{step}") if step <= 0
       step.times do
         @index -= 1
-        @node = @node.succ
+        @node = @succ.call(@node)
       end
 
       @index = @index % @size.call
     end
 
     def do_bump
-      @node = @node.pred
+      @node = @pred.call(@node)
     end
   end
 
   #
   #    Circular doubly-linked list w/ cursor to preserve recently accessed position
   #    
-  class DoublyLinkedList < MutableLinkedList
-#    protected
-#    attr_reader :store
-    
+  class DcursorList < MutableLinkedList
     def initialize(type: Object, fill_elt: nil)
       super(type, fill_elt)
+      @cursor = setup_cursor
+    end
+
+    protected
+    attr_reader :cursor
+
+    def setup_cursor
+      raise NoMethodError, "#{self.class} does not implement setup_cursor()"
+    end
+      
+    def nth_dll_node(n)
+      if empty?
+        raise ArgumentError.new("List is empty.")
+      else
+        raise ArgumentError.new("Invalid index: #{n}") if (n < 0  ||  n >= size)
+        
+        reposition_cursor(@cursor, n, size)
+
+        @cursor.node
+      end
+    end
+
+    private
+    def reposition_cursor(cursor, i, count)
+        index = cursor.index
+        
+        if i.zero?
+          cursor.reset
+        elsif i < index
+          index_delta = index - i
+          start_delta = i
+
+          if start_delta < index_delta
+            cursor.reset
+            cursor.advance(start_delta)
+          else
+            cursor.rewind(index_delta)
+          end
+        elsif i > index
+          index_delta = i - index
+          end_delta = count - i
+
+          if index_delta <= end_delta
+            cursor.advance(index_delta)
+          else
+            cursor.reset
+            cursor.rewind(end_delta)
+          end
+        end
+    end
+
+    def do_get(i)
+      nth_dll_node(i).content
+    end
+
+    def do_set(i, obj)
+      nth_dll_node(i).content = obj
+    end
+
+    def do_do_add(objs)
+      add_elements(objs)
+
+      @cursor.reset unless @cursor.initialized?
+    end
+
+    def add_elements(objs)
+      raise NoMethodError, "#{self.class} does not implement add_elements()"
+    end
+
+    def do_do_insert(i, obj)
+      insert_elt(i, obj) # Have to design ahead of time!!
+
+      if !@cursor.initialized?  ||
+         i.between?(0, @cursor.index)  ||
+         (i.negative? && (i + @count).between?(0, @cursor.index))
+        @cursor.reset
+      end
+    end
+
+    def insert_elt(i, obj)
+      raise NoMethodError, "#{self.class} does not implement insert_elt()"
+    end
+
+    def do_insert_before(node, obj)
+      insert_elt_before(node, obj)
+      
+      @cursor.reset
+    end
+
+    def insert_elt_before(node, obj)
+      raise NoMethodError, "#{self.class} does not implement insert_elt_before()"
+    end
+
+    def do_insert_after(node, obj)
+      insert_elt_after(node, obj)
+      
+      @cursor.reset
+    end
+    
+    def insert_elt_after(node, obj)
+      raise NoMethodError, "#{self.class} does not implement insert_elt_after()"
+    end
+
+    def do_do_delete(i)
+      doomed = delete_elt(i)
+      @cursor.reset
+      
+      doomed
+    end
+
+    def delete_elt(i)
+      raise NoMethodError, "#{self.class} does not implement delete_elt()"
+    end
+
+    def do_delete_node(doomed)
+      result = do_do_delete_node(doomed)
+      @cursor.reset
+      
+      result
+    end
+
+    def do_do_delete_node(doomed)
+      raise NoMethodError, "#{self.class} does not implement do_do_delete_node()"
+    end
+
+    def do_delete_child(parent)
+      result = do_do_delete_child(parent)
+      @cursor.reset
+      
+      result
+    end
+
+    def do_do_delete_child(parent)
+      raise NoMethodError, "#{self.class} does not implement do_do_delete_child()"
+    end
+  end
+  
+  class DoublyLinkedList < DcursorList
+    def initialize(type: Object, fill_elt: nil)
+      super(type: type, fill_elt: fill_elt)
       @store = nil
       @count = 0
-      @cursor = setup_cursor
     end
     
     def size
@@ -1071,16 +1236,6 @@ module Containers
       @store.nil?
     end
     
-    # def iterator
-    #   cursor = setup_cursor
-    #   sealed_for_your_protection = true
-    #   MutableCollectionIterator.new(modification_count: ->() {@modification_count},
-    #                                 done: ->() {!cursor.initialized? ||
-    #                                             (!sealed_for_your_protection && cursor.start?)},
-    #                                 current: ->() {cursor.node.content}, # ???
-    #                                 advance: ->() {cursor.advance; sealed_for_your_protection = false})
-    # end
-
     def iterator
       MutableCollectionIterator.new(modification_count: ->() {@modification_count},
                                     cursor: Cursor.make_doubly_linked_list_cursor(setup_cursor))
@@ -1093,12 +1248,12 @@ module Containers
                                        init: ->() {setup_cursor})
     end
 
-#    protected
-#    attr_reader :head, :cursor
-
     private
     def setup_cursor
-      Dcursor.new(head: ->() {@store}, size: ->() {@count})
+      Dcursor.new(head: ->() {@store},
+                  size: ->() {@count},
+                  pred: ->(node) {node.pred}, # Can't send method itself?? #'pred
+                  succ: ->(node) {node.succ})
     end
 
     # def clear
@@ -1123,75 +1278,6 @@ module Containers
       end
     end
 
-    # def nth_dcons(i)
-    #   raise ArgumentError.new("Invalid index: #{i}") if (i < 0  ||  i >= size)
-
-    #   if empty?
-    #     raise ArgumentError.new("List is empty.")
-    #   else
-    #     index = @cursor.index
-        
-    #     if i.zero?
-    #       @store
-    #     elsif i == index
-    #       @cursor.node
-    #     elsif i < index / 2
-    #       @cursor.reset
-    #       @cursor.advance(i)
-    #       @cursor.node
-    #     elsif i < index
-    #       @cursor.rewind(index - i)
-    #       @cursor.node
-    #     elsif i <= (size + index) / 2
-    #       @cursor.advance(i - index)
-    #       @cursor.node
-    #     else
-    #       @cursor.reset
-    #       @cursor.rewind(size - i)
-    #       @cursor.node
-    #     end
-    #   end
-    # end
-
-    def nth_dcons(i)
-      if empty?
-        raise ArgumentError.new("List is empty.")
-      else
-        raise ArgumentError.new("Invalid index: #{i}") if (i < 0  ||  i >= size)
-        
-        reposition_cursor(i)
-
-        @cursor.node
-      end
-    end
-
-    def reposition_cursor(i)
-        index = @cursor.index
-        
-        if i.zero?
-          @cursor.reset
-        elsif i < index
-          index_delta = index - i
-
-          if i < index_delta
-            @cursor.reset
-            @cursor.advance(i)
-          else
-            @cursor.rewind(index_delta)
-          end
-        elsif i > index
-          index_delta = i - index
-          size_delta = size - i
-
-          if index_delta <= size_delta
-            @cursor.advance(index_delta)
-          else
-            @cursor.reset
-            @cursor.rewind(size_delta)
-          end
-        end
-    end
-
     # def do_contains?(obj)
     #   @count.times do |i|
     #     return true if self[i] == obj # This is reasonable due to cursor... Oops! Nope.
@@ -1210,7 +1296,7 @@ module Containers
     #   return nil
     # end
 
-    def do_do_add(objs)
+    def add_elements(objs)
       elt, *elts = objs
       dcons = Dcons.new(elt)
       if empty?
@@ -1221,8 +1307,6 @@ module Containers
       end
       
       add_nodes(dcons, elts)
-
-      @cursor.reset unless @cursor.initialized?
     end
 
     def add_nodes(start, elts)
@@ -1233,46 +1317,28 @@ module Containers
         dcons = dcons.succ
         i += 1
       end
+
       dcons.link(@store)
       @count += i
     end
 
-    def do_get(i)
-      nth_dcons(i).content
-    end
-
-    def do_set(i, obj)
-      nth_dcons(i).content = obj
-    end
-
-    def do_do_insert(i, obj)
-      do_do_do_insert(i, obj) # Have to design ahead of time!!
-      
-      @count += 1
-
-      if !@cursor.initialized?  ||
-         i.between?(0, @cursor.index)  ||
-         (i.negative? && (i + @count).between?(0, @cursor.index))
-        @cursor.reset
-      end
-    end
-
-    def do_do_do_insert(i, obj)
-      nth_dcons(i).splice_before(obj)
+    def insert_elt(i, obj)
+      nth_dll_node(i).splice_before(obj)
 
       if i.zero?
         @store = @store.pred
       end
+
+      @count += 1
     end
 
-    def do_insert_before(node, obj)
-      do_do_insert_before(node, obj)
+    def insert_elt_before(node, obj)
+      do_insert_elt_before(node, obj)
       
       @count += 1
-      @cursor.reset
     end
 
-    def do_do_insert_before(node, obj)
+    def do_insert_elt_before(node, obj)
       node.splice_before(obj)
 
       if node == @store
@@ -1280,31 +1346,28 @@ module Containers
       end
     end      
 
-    def do_insert_after(node, obj)
-      do_do_insert_after(node, obj)
+    def insert_elt_after(node, obj)
+      do_insert_elt_after(node, obj)
       
       @count += 1
-      @cursor.reset
     end
     
-    def do_do_insert_after(node, obj)
+    def do_insert_elt_after(node, obj)
       node.splice_after(obj)
     end
     
-    def do_do_delete(i)
-      doomed = delete_dcons(nth_dcons(i))
+    def delete_elt(i)
+      doomed = delete_dcons(nth_dll_node(i))
 
       @count -= 1
-      @cursor.reset
       
       doomed
     end
 
-    def do_delete_node(doomed)
+    def do_do_delete_node(doomed)
       result = delete_dcons(doomed)
 
       @count -= 1
-      @cursor.reset
       
       result
     end
@@ -1312,16 +1375,15 @@ module Containers
     #
     #    This is not really needed for DoublyLinkedList.
     #    
-    def do_delete_child(parent)
-      result = do_do_delete_child(parent)
+    def do_do_delete_child(parent)
+      result = delete_child_node(parent)
 
       @count -= 1
-      @cursor.reset
       
       result
     end
 
-    def do_do_delete_child(parent)
+    def delete_child_node(parent)
       child = parent.succ
 
       if child == @store
@@ -1367,11 +1429,12 @@ module Containers
     #
     #    Inclusive `i`, exclusive `j`
     #    
-    def subseq(i, j)
+#    def subseq(i, j)
+    def sublist(i, j)
       result = []
       
       if i < j
-        dcons = nth_dcons(i)
+        dcons = nth_dll_node(i)
         (i...j).each do
           result << dcons.content
           dcons = dcons.succ
@@ -1385,13 +1448,13 @@ module Containers
     #    Returns empty DoublyLinkedList if negative i is too far
     #    vs. Array#slice => nil
     #    
-    def do_slice(i, n)
-      list = make_empty_list
-      slice = subseq([i, @count].min, [i+n, @count].min)
+    # def do_slice(i, n)
+    #   list = make_empty_list
+    #   slice = subseq([i, @count].min, [i+n, @count].min)
 
-      list.add(*slice)
-      list
-    end
+    #   list.add(*slice)
+    #   list
+    # end
 
     def make_empty_list
       DoublyLinkedList.new(type: type, fill_elt: fill_elt)
@@ -1405,6 +1468,21 @@ module Containers
     end
 
     private
+    def setup_cursor
+      case @direction
+      when :forward
+        Dcursor.new(head: ->() {@store},
+                    size: ->() {@count},
+                    pred: ->(node) {node.pred},
+                    succ: ->(node) {node.succ})
+      when :backward
+        DcursorB.new(head: ->() {@store},
+                     size: ->() {@count},
+                     pred: ->(node) {node.pred},
+                     succ: ->(node) {node.succ})
+      end
+    end
+
     def ratchet_forward(node)
       case @direction
       when :forward then node.succ
@@ -1442,15 +1520,6 @@ module Containers
       end
     end
 
-    def setup_cursor
-      case @direction
-      when :forward
-        Dcursor.new(head: ->() {@store}, size: ->() {@count})
-      when :backward
-        DcursorB.new(head: ->() {@store}, size: ->() {@count})
-      end
-    end
-
     def do_clear
       unless empty?
         dcons = @store
@@ -1466,7 +1535,7 @@ module Containers
       end
     end
 
-    def do_do_add(objs)
+    def add_elements(objs)
       elt, *elts = objs
       dcons = Dcons.new(elt)
       if empty?
@@ -1476,8 +1545,6 @@ module Containers
       end
       
       add_nodes(dcons, elts)
-
-      @cursor.reset unless @cursor.initialized?
     end
 
     def add_node_to_end(previous_end, new_end)
@@ -1492,22 +1559,25 @@ module Containers
         dcons = ratchet_forward(dcons)
         i += 1
       end
+
       ratchet_dlink(dcons, @store)
       @count += i
     end
 
-    def do_do_do_insert(i, obj)
+    def insert_elt(i, obj)
       case @direction
-      when :forward then nth_dcons(i).splice_before(obj)
-      when :backward then nth_dcons(i).splice_after(obj)
+      when :forward then nth_dll_node(i).splice_before(obj)
+      when :backward then nth_dll_node(i).splice_after(obj)
       end
 
       if i.zero?
         @store = ratchet_backward(@store)
       end
+
+      @count += 1
     end
 
-    def do_do_insert_before(node, obj)
+    def do_insert_elt_before(node, obj)
       case @direction
       when :forward then node.splice_before(obj)
       when :backward then node.splice_after(obj)
@@ -1518,7 +1588,7 @@ module Containers
       end
     end
 
-    def do_do_insert_after(node, obj)
+    def do_insert_elt_after(node, obj)
       case @direction
       when :forward then node.splice_after(obj)
       when :backward then node.splice_before(obj)
@@ -1528,7 +1598,7 @@ module Containers
     #
     #    This is not really needed for DoublyLinkedList.
     #    
-    def do_do_delete_child(parent)
+    def delete_child_node(parent)
       child = ratchet_forward(parent)
 
       if child == @store
@@ -1544,11 +1614,12 @@ module Containers
     #
     #    Inclusive `i`, exclusive `j`
     #    
-    def subseq(i, j)
+#    def subseq(i, j)
+    def sublist(i, j)
       result = []
       
       if i < j
-        dcons = nth_dcons(i)
+        dcons = nth_dll_node(i)
         (i...j).each do
           result << dcons.content
           dcons = ratchet_forward(dcons)
@@ -1573,6 +1644,263 @@ module Containers
       end
 
       @cursor = setup_cursor
+    end
+  end
+
+  class Dnode
+    attr_accessor :content
+
+    def initialize(content)
+      @content = content
+    end
+
+    def to_s
+      "<#{@content}>"
+    end
+  end
+
+  #
+  #    Circular "doubly-linked list" w/ cursor to preserve recently accessed position
+  #    Links are stored in two hash tables.
+  #    
+  class DoublyLinkedListHash < DcursorList
+    def initialize(type: Object, fill_elt: nil)
+      super(type: type, fill_elt: fill_elt)
+      @head = nil
+      @forward = {}
+      @backward = {}
+    end
+      
+    def size
+      @forward.size
+    end
+    
+    def empty?
+      @head.nil?
+    end
+    
+    def iterator
+      MutableCollectionIterator.new(modification_count: ->() {@modification_count},
+                                    cursor: Cursor.make_doubly_linked_list_cursor(setup_cursor))
+    end
+
+    def list_iterator(start=0)
+      DoublyLinkedListListIterator.new(list: self,
+                                       start: start,
+                                       modification_count: ->() {@modification_count},
+                                       init: ->() {setup_cursor})
+    end
+
+    private
+    def setup_cursor
+        Dcursor.new(head: ->() {@head},
+                    size: ->() {size},
+                    pred: ->(node) {previous_dnode(node)},
+                    succ: ->(node) {next_dnode(node)})
+    end
+
+    def next_dnode(node)
+      @forward[node]
+    end
+
+    def set_next_dnode(node, obj)
+      @forward[node] = obj
+    end
+
+    def previous_dnode(node)
+      @backward[node]
+    end
+
+    def set_previous_dnode(node, obj)
+      @backward[node] = obj
+    end
+
+    def link_dnodes(pred, succ)
+      set_next_dnode(pred, succ)
+      set_previous_dnode(succ, pred)
+    end
+
+    def splice_dnode_before(node, obj)
+      new_dnode = Dnode.new(obj)
+      link_dnodes(previous_dnode(node), new_dnode)
+      link_dnodes(new_dnode, node)
+    end
+
+    def splice_dnode_after(node, obj)
+      new_dnode = Dnode.new(obj)
+      link_dnodes(new_dnode, next_dnode(node))
+      link_dnodes(node, new_dnode)
+    end
+
+    def excise_dnode(doomed)
+      if doomed == next_dnode(doomed)
+        raise StandardError.new("Cannot delete sole node.")
+      else
+        link_dnodes(previous_dnode(doomed), next_dnode(doomed))
+        doomed.content
+      end
+    end
+    
+    def excise_child_dnode(parent)
+      child = next_dnode(parent)
+
+      if @head == child
+        raise StandardError.new("Parent must have child node")
+      else
+        link_dnodes(parent, next_dnode(child))
+        child.content
+      end
+    end
+
+    def do_clear
+        @head = nil
+        @forward.clear
+        @backward.clear
+        @cursor.reset
+    end
+
+    def add_elements(objs)
+      elt, *elts = objs
+      dnode = Dnode.new(elt)
+      if empty?
+        @head = dnode
+      else
+        link_dnodes(previous_dnode(@head), dnode)
+      end
+      
+      add_nodes(dnode, elts)
+    end
+
+    def add_nodes(start, elts)
+      dnode = start
+      i = 1
+      elts.each do |elt|
+        link_dnodes(dnode, Dnode.new(elt))
+        dnode = next_dnode(dnode)
+        i += 1
+      end
+
+      link_dnodes(dnode, @head)
+    end
+
+    def insert_elt(i, obj)
+      splice_dnode_before(nth_dll_node(i), obj)
+
+      if i.zero?
+        @head = previous_dnode(@head)
+      end
+    end
+
+    def insert_elt_before(node, obj)
+      splice_dnode_before(node, obj)
+
+      if node == @head
+        @head = previous_dnode(@head)
+      end
+    end      
+
+    def insert_elt_after(node, obj)
+      splice_dnode_after(node, obj)
+    end
+    
+    def delete_elt(i)
+      delete_dnode(nth_dll_node(i))
+    end
+
+    def do_delete_node(doomed)
+      delete_dnode(doomed)
+    end
+
+    #
+    #    This is not really needed for DoublyLinkedList.
+    #    
+    def do_do_delete_child(parent)
+      child = next_dnode(parent)
+
+      if child == @head
+        raise StandardError.new("Parent must have child node")
+      else
+        result = excise_child_dnode(parent)
+        @forward.delete(child)
+        @backward.delete(child)
+
+        result
+      end
+    end
+
+    def delete_dnode(doomed)
+      result = doomed.content
+      if doomed == next_dnode(doomed)
+        set_next_dnode(doomed, nil) # Release for GC
+        @head = nil
+      else
+        excise_dnode(doomed)
+        if doomed == @head
+          @head = next_dnode(doomed)
+        end
+      end
+
+      @forward.delete(doomed)
+      @backward.delete(doomed)
+      result
+    end
+
+    # def do_index(obj)
+    #   @count.times do |i|
+    #     return i if self[i] == obj # This is reasonable due to cursor D'oh!
+    #   end
+
+    #   return nil
+    # end
+
+    # def do_index(obj, test)
+    #   dcons = @store
+    #   @count.times do |i|
+    #     return i if test.call(obj, dcons.content)
+    #     dcons = dcons.succ
+    #   end
+
+    #   return nil
+    # end
+
+    #
+    #    Inclusive `i`, exclusive `j`
+    #    
+#    def subseq(i, j)
+    def sublist(i, j)
+      result = []
+      
+      if i < j
+        dnode = nth_dll_node(i)
+        (i...j).each do
+          result << dnode.content
+          dnode = next_dnode(dnode)
+        end
+      end
+
+      result
+    end
+    
+    #
+    #    Returns empty DoublyLinkedList if negative i is too far
+    #    vs. Array#slice => nil
+    #    
+    # def do_slice(i, n)
+    #   list = make_empty_list
+    #   slice = subseq([i, @count].min, [i+n, @count].min)
+
+    #   list.add(*slice)
+    #   list
+    # end
+
+    def make_empty_list
+      DoublyLinkedListHash.new(type: type, fill_elt: fill_elt)
+    end
+
+    def do_reverse
+      @head = previous_dnode(@head)
+      @forward, @backward = @backward, @forward
+      @cursor.reset
     end
   end
 
@@ -1668,19 +1996,23 @@ module Containers
     #   return nil
     # end
 
-    def do_slice(i, n)
-      list = HashList.new(type: type, fill_elt: fill_elt)
+    # def do_slice(i, n)
+    #   list = HashList.new(type: type, fill_elt: fill_elt)
 
-      low = [i, size].min
-      high = [i+n, size].min
-      slice = []
+    #   low = [i, size].min
+    #   high = [i+n, size].min
+    #   slice = []
 
-      low.upto(high-1) do |j|
-        slice << get(j)
-      end
+    #   low.upto(high-1) do |j|
+    #     slice << get(j)
+    #   end
 
-      list.add(*slice)
-      list
+    #   list.add(*slice)
+    #   list
+    # end
+
+    def make_empty_list
+      HashList.new(type: type, fill_elt: fill_elt)
     end
   end
 
@@ -1834,7 +2166,7 @@ module Containers
     def adjust_node(store, i, adjustment)
       front = nil
       rear = nil
-      node = @store
+      node = store
       
       i.times do |j|
         new_node = Node.new(node.first, nil)
@@ -1877,6 +2209,12 @@ module Containers
     
     def do_index(obj, test)
       Node.index(@store, obj, test: test)
+    end
+
+    def do_slice(i, n)
+      first = [i, size].min
+      last = [i+n, size].min
+      initialize_list(adjust_node(Node.nthcdr(@store, first), last-first, ->(node) {nil}), last-first)
     end
   end
 
