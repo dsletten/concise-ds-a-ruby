@@ -21,7 +21,8 @@ class TestList < Test::Unit::TestCase
     list = constructor.call
     assert(list.empty?, "New list should be empty.")
     assert(list.size.zero?, "Size of new list should be zero.")
-    assert(list[0].nil?, "Accessing element of empty list returns nil.")
+    # assert(list[0].nil?, "Accessing element of empty list returns nil.")
+    assert(list.get(0).nil?, "Accessing element of empty list returns nil.")
   end
 
   def test_empty?(constructor)
@@ -42,6 +43,13 @@ class TestList < Test::Unit::TestCase
       list.add(i)
       assert_equal(i, list.size, "Size of list should be #{i}")
     end
+
+    count.downto(1) do |i|
+      assert_equal(i, list.size, "Size of list should be #{i}")
+      list.delete(0)
+    end
+
+    assert(list.size.zero?, "Size of empty list should be zero.")
   end
 
   def test_clear(constructor)
@@ -54,9 +62,10 @@ class TestList < Test::Unit::TestCase
   end
 
   def fill(list, count)
-    1.upto(count) do |i|
-      list.add(i)
-    end
+    # 1.upto(count) do |i|
+    #   list.add(i)
+    # end
+    list.add(*((1..count).to_a))
   end
 
   def test_contains?(constructor)
@@ -394,6 +403,32 @@ class TestSinglyLinkedList < TestList
   end
 end
 
+class TestSinglyLinkedListX < TestList
+  def test_it
+    test_constructor(lambda {Containers::SinglyLinkedListX.new})
+    test_empty?(lambda {Containers::SinglyLinkedListX.new})
+    test_size(lambda {Containers::SinglyLinkedListX.new})
+    test_clear(lambda {Containers::SinglyLinkedListX.new})
+    test_each(lambda {Containers::SinglyLinkedListX.new})
+    test_contains?(lambda {Containers::SinglyLinkedListX.new})
+    test_insert(lambda {|type, fill_elt| Containers::SinglyLinkedListX.new(type, fill_elt)})
+    test_insert_fill_zero(lambda {|type, fill_elt| Containers::SinglyLinkedListX.new(type, fill_elt)})
+    test_insert_negative_index(lambda {Containers::SinglyLinkedListX.new})
+    test_insert_end(lambda {Containers::SinglyLinkedListX.new})
+    test_delete(lambda {Containers::SinglyLinkedListX.new})
+    test_delete_negative_index(lambda {Containers::SinglyLinkedListX.new})
+    test_nth(lambda {Containers::SinglyLinkedListX.new})
+    test_nth_negative_index(lambda {Containers::SinglyLinkedListX.new})
+    test_set_nth(lambda {Containers::SinglyLinkedListX.new})
+    test_set_nth_negative_index(lambda {Containers::SinglyLinkedListX.new})
+    test_set_nth_out_of_bounds(lambda {Containers::SinglyLinkedListX.new})
+    test_index(lambda {Containers::SinglyLinkedListX.new})
+    test_slice(lambda {Containers::SinglyLinkedListX.new})
+    test_slice_corner_cases(lambda {Containers::SinglyLinkedListX.new})
+    test_time(lambda {puts("SinglyLinkedListX"); Containers::SinglyLinkedListX.new})
+  end
+end
+
 class TestDoublyLinkedList < TestList
   def test_it
     test_constructor(lambda {Containers::DoublyLinkedList.new})
@@ -417,6 +452,58 @@ class TestDoublyLinkedList < TestList
     test_slice(lambda {Containers::DoublyLinkedList.new})
     test_slice_corner_cases(lambda {Containers::DoublyLinkedList.new})
     test_time(lambda {puts("DoublyLinkedList"); Containers::DoublyLinkedList.new})
+  end
+end
+
+class TestDoublyLinkedListRatchet < TestList
+  def test_it
+    test_constructor(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_empty?(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_size(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_clear(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_each(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_contains?(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_insert(lambda {|type, fill_elt| Containers::DoublyLinkedListRatchet.new(type, fill_elt)})
+    test_insert_fill_zero(lambda {|type, fill_elt| Containers::DoublyLinkedListRatchet.new(type, fill_elt)})
+    test_insert_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_insert_end(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_delete(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_delete_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_nth(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_nth_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_set_nth(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_set_nth_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_set_nth_out_of_bounds(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_index(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_slice(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_slice_corner_cases(lambda {Containers::DoublyLinkedListRatchet.new})
+    test_time(lambda {puts("DoublyLinkedListRatchet"); Containers::DoublyLinkedListRatchet.new})
+  end
+end
+
+class TestDoublyLinkedListHash < TestList
+  def test_it
+    test_constructor(lambda {Containers::DoublyLinkedListHash.new})
+    test_empty?(lambda {Containers::DoublyLinkedListHash.new})
+    test_size(lambda {Containers::DoublyLinkedListHash.new})
+    test_clear(lambda {Containers::DoublyLinkedListHash.new})
+    test_each(lambda {Containers::DoublyLinkedListHash.new})
+    test_contains?(lambda {Containers::DoublyLinkedListHash.new})
+    test_insert(lambda {|type, fill_elt| Containers::DoublyLinkedListHash.new(type, fill_elt)})
+    test_insert_fill_zero(lambda {|type, fill_elt| Containers::DoublyLinkedListHash.new(type, fill_elt)})
+    test_insert_negative_index(lambda {Containers::DoublyLinkedListHash.new})
+    test_insert_end(lambda {Containers::DoublyLinkedListHash.new})
+    test_delete(lambda {Containers::DoublyLinkedListHash.new})
+    test_delete_negative_index(lambda {Containers::DoublyLinkedListHash.new})
+    test_nth(lambda {Containers::DoublyLinkedListHash.new})
+    test_nth_negative_index(lambda {Containers::DoublyLinkedListHash.new})
+    test_set_nth(lambda {Containers::DoublyLinkedListHash.new})
+    test_set_nth_negative_index(lambda {Containers::DoublyLinkedListHash.new})
+    test_set_nth_out_of_bounds(lambda {Containers::DoublyLinkedListHash.new})
+    test_index(lambda {Containers::DoublyLinkedListHash.new})
+    test_slice(lambda {Containers::DoublyLinkedListHash.new})
+    test_slice_corner_cases(lambda {Containers::DoublyLinkedListHash.new})
+    test_time(lambda {puts("DoublyLinkedListHash"); Containers::DoublyLinkedListHash.new})
   end
 end
 

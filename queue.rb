@@ -554,7 +554,7 @@ module Containers
   class DllDeque < Deque
     def initialize(type=Object)
       super(type)
-      @list = DoublyLinkedList.new(type)
+      @list = DoublyLinkedList.new(type: type)
     end
     
     def size
@@ -726,6 +726,63 @@ module Containers
 
     def do_rear
       @rear.first
+    end
+  end
+
+  class PersistentListDeque < Deque
+    @@empty = PersistentList.new
+    def initialize(type=Object)
+      super(type)
+      @list = @@empty
+    end
+
+    def size
+      @list.size
+    end
+
+    def clear
+      PersistentListDeque.new(@type)
+    end
+
+    protected
+    #
+    #    Writers only exist to adjust non-empty PersistentListDeque after creation.
+    #    Constructor only creates empty deques since it is public.
+    #    
+    def list=(list)
+      @list = list
+    end
+
+    private
+    def create_deque(list)
+      dq = PersistentListDeque.new(@type)
+      dq.list = list
+
+      dq
+    end
+
+    def do_enqueue(obj)
+      create_deque(@list.add(obj))
+    end
+
+    def do_dequeue
+      create_deque(@list.delete(0))
+    end
+
+    def do_enqueue_front(obj)
+      create_deque(@list.insert(0, obj))
+    end
+
+    def do_dequeue_rear
+      create_deque(@list.delete(-1))
+    end
+    
+    def do_front
+      @list.get(0)
+    end
+
+    def do_rear
+      @list.get(-1)
     end
   end
 end

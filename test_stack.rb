@@ -1,4 +1,4 @@
-#!/snap/bin/ruby -w
+#!/usr/bin/ruby -w
 
 #    File:
 #       test_stack.rb
@@ -12,8 +12,10 @@
 #       210116 Original.
 
 require './containers'
+require './list'
 require './stack'
 require 'test/unit'
+require 'benchmark'
 
 class TestStack < Test::Unit::TestCase
   def test_constructor(constructor)
@@ -34,35 +36,40 @@ class TestStack < Test::Unit::TestCase
   end
 
   def test_size(constructor)
-    #  def test_size(constructor, count=1000)
+#  def test_size(constructor, count=1000)
     count = 1000
     stack = constructor.call
     assert(stack.size.zero?, "Size of new stack should be zero.")
     1.upto(count) do |i|
       stack.push(i)
-      assert_equal(i, stack.size, "Size of stack should be #{i}")
+      assert_stack_size(stack, i)
     end
   end
 
+  def assert_stack_size(stack, n)
+      assert_equal(n, stack.size, "Size of stack should be #{n}")
+  end    
+
   def test_clear(constructor)
     count = 1000
-    stack = constructor.call
-    fill(stack, count)
+    stack = fill(constructor.call, count)
     assert(!stack.empty?, "Stack should have #{count} elements.")
     stack.clear
     assert(stack.empty?, "Stack should be empty.")
+    assert_stack_size(stack, 0)
   end
 
   def fill(stack, count)
     1.upto(count) do |i|
       stack.push(i)
     end
+
+    stack
   end
 
   def test_pop(constructor)
     count = 1000
-    stack = constructor.call
-    fill(stack, count)
+    stack = fill(constructor.call, count)
 
     stack.size.downto(1) do |i|
       popped = stack.pop
@@ -73,8 +80,7 @@ class TestStack < Test::Unit::TestCase
     
   def test_peek(constructor)
     count = 1000
-    stack = constructor.call
-    fill(stack, count)
+    stack = fill(constructor.call, count)
 
     stack.size.downto(1) do |i|
       top = stack.peek
@@ -84,62 +90,47 @@ class TestStack < Test::Unit::TestCase
     assert(stack.empty?)
   end
 
+  def test_time(constructor)
+    count = 100000
+    stack = constructor.call
+    
+    Benchmark.bm do |run|
+      run.report("Timing #{stack.class}") do 
+        10.times do
+          fill(stack, count)
+          until stack.empty?
+            stack.pop
+          end
+        end
+      end
+    end
+  end
+
   def test_wave(constructor)
     stack = constructor.call
     fill(stack, 5000)
-    assert_equal(5000, stack.size, "Size of stack should be 5000")
+    assert_stack_size(stack, 5000)
+
     3000.times { stack.pop }
-    assert_equal(2000, stack.size, "Size of stack should be 2000")
+    assert_stack_size(stack, 2000)
     
     fill(stack, 5000)
-    assert_equal(7000, stack.size, "Size of stack should be 7000")
+    assert_stack_size(stack, 7000)
+
     3000.times { stack.pop }
-    assert_equal(4000, stack.size, "Size of stack should be 4000")
+    assert_stack_size(stack, 4000)
 
     fill(stack, 5000)
-    assert_equal(9000, stack.size, "Size of stack should be 9000")
+    assert_stack_size(stack, 9000)
+
     3000.times { stack.pop }
-    assert_equal(6000, stack.size, "Size of stack should be 6000")
+    assert_stack_size(stack, 6000)
 
     fill(stack, 4000)
-    assert_equal(10000, stack.size, "Size of stack should be 10000")
+    assert_stack_size(stack, 10000)
+
     10000.times { stack.pop }
     assert(stack.empty?, "Stack should be empty.")
-  end
-
-  # def test_container_ops
-  #   s = LinkedStack.new
-  #   assert(s.empty?)
-  #   assert_equal(0, s.size)
-  #   (1..3).each { |i| s.push(i) }
-  #   assert(!s.empty?)
-  #   assert_equal(3, s.size)
-  #   s.clear
-  #   assert(s.empty?)
-  #   assert_equal(0, s.size)
-  # end
-  
-  # def test_stack_ops
-  #   s = LinkedStack.new
-  #   assert_raises(StandardError) { s.pop }
-  #   assert_raises(StandardError) { s.top }
-  #   (1..20).each { |i| s.push(i) }
-  #   assert_equal(20, s.top)
-  #   assert_equal(20, s.pop)
-  #   assert_equal(19, s.size)
-  #   assert_equal(19, s.top)
-  # end
-end
-
-class TestLinkedStack < TestStack
-  def test_it
-    test_constructor(lambda {Containers::LinkedStack.new})
-    test_empty?(lambda {Containers::LinkedStack.new})
-    test_size(lambda {Containers::LinkedStack.new})
-    test_clear(lambda {Containers::LinkedStack.new})
-    test_pop(lambda {Containers::LinkedStack.new})
-    test_peek(lambda {Containers::LinkedStack.new})
-    test_wave(lambda {Containers::LinkedStack.new})
   end
 end
 
@@ -151,7 +142,34 @@ class TestArrayStack < TestStack
     test_clear(lambda {Containers::ArrayStack.new})
     test_pop(lambda {Containers::ArrayStack.new})
     test_peek(lambda {Containers::ArrayStack.new})
+    test_time(lambda {Containers::ArrayStack.new})
     test_wave(lambda {Containers::ArrayStack.new})
+  end
+end
+
+class TestLinkedStack < TestStack
+  def test_it
+    test_constructor(lambda {Containers::LinkedStack.new})
+    test_empty?(lambda {Containers::LinkedStack.new})
+    test_size(lambda {Containers::LinkedStack.new})
+    test_clear(lambda {Containers::LinkedStack.new})
+    test_pop(lambda {Containers::LinkedStack.new})
+    test_peek(lambda {Containers::LinkedStack.new})
+    test_time(lambda {Containers::LinkedStack.new})
+    test_wave(lambda {Containers::LinkedStack.new})
+  end
+end
+
+class TestLinkedListStack < TestStack
+  def test_it
+    test_constructor(lambda {Containers::LinkedListStack.new})
+    test_empty?(lambda {Containers::LinkedListStack.new})
+    test_size(lambda {Containers::LinkedListStack.new})
+    test_clear(lambda {Containers::LinkedListStack.new})
+    test_pop(lambda {Containers::LinkedListStack.new})
+    test_peek(lambda {Containers::LinkedListStack.new})
+    test_time(lambda {Containers::LinkedListStack.new})
+    test_wave(lambda {Containers::LinkedListStack.new})
   end
 end
 
@@ -163,6 +181,7 @@ class TestHashStack < TestStack
     test_clear(lambda {Containers::HashStack.new})
     test_pop(lambda {Containers::HashStack.new})
     test_peek(lambda {Containers::HashStack.new})
+    test_time(lambda {Containers::HashStack.new})
     test_wave(lambda {Containers::HashStack.new})
   end
 end

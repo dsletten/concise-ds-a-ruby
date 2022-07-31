@@ -1,5 +1,3 @@
-#!/snap/bin/ruby -w
-
 #    File:
 #       containers.rb
 #
@@ -153,7 +151,16 @@ module Containers
       if l1.nil?
         l2
       else
-        Node.new(l1.first, append(l1.rest, l2))
+#        Node.new(l1.first, append(l1.rest, l2))
+        node = Node.new(l1.first, l1.rest)
+        tail = node
+        until tail.rest.nil?
+          tail.rest = Node.new(tail.rest.first, tail.rest.rest)
+          tail = tail.rest
+        end
+        tail.rest = l2
+
+        node
       end
     end
 

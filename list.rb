@@ -278,6 +278,8 @@ module Containers
         do_do_add(objs)
         count_modification
       end
+
+      self
     end
 
     def do_insert(i, obj)
@@ -1555,7 +1557,7 @@ module Containers
       dcons = start
       i = 1
       elts.each do |elt|
-        add_node_to_end(dcons, (Dcons.new(elt)))
+        add_node_to_end(dcons, Dcons.new(elt))
         dcons = ratchet_forward(dcons)
         i += 1
       end
