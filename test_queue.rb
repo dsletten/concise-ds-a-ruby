@@ -87,13 +87,13 @@ class TestQueue < Test::Unit::TestCase
     assert(!queue.empty?, "Emptying queue should not break it.")
   end
 
-  def fill(queue, count)
-    1.upto(count) do |i|
-      queue.enqueue(i)
-    end
+  # def fill(queue, count)
+  #   1.upto(count) do |i|
+  #     queue.enqueue(i)
+  #   end
 
-    queue
-  end
+  #   queue
+  # end
 
   def test_dequeue(constructor)
     count = 1000

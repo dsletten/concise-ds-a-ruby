@@ -27,10 +27,10 @@ module Containers
   class List < Collection
     attr_reader :fill_elt
     
-    def initialize(type, fill_elt)
+    def initialize(type: Object, fill_elt: nil)
       raise ArgumentError.new("Incompatible fill_elt type") unless fill_elt.is_a?(type)
 
-      super(type)
+      super(type: type)
       @fill_elt = fill_elt
     end
 
@@ -182,9 +182,15 @@ module Containers
     end
 
     def reverse
-      raise NoMethodError, "#{self.class} does not implement reverse()"
+      reversed = []
+      each {|elt| reversed.unshift(elt)}
+      make_empty_list.add(*reversed)
     end
     
+    def fill(count: 1000, generator: ->(x) { x })
+      add(*((1..count).map {|x| generator.call(x)}))
+    end
+
     private
     def do_add(objs)
       raise NoMethodError, "#{self.class} does not implement do_add()"
@@ -212,14 +218,14 @@ module Containers
     end
 
     def do_index(obj, test)
-      i = iterator
-      j = 0
+      iter = iterator
+      i = 0
 
-      until i.done?
-        elt = i.current
-        return j if test.call(obj, elt)
-        i.next
-        j += 1
+      until iter.done?
+        elt = iter.current
+        return i if test.call(obj, elt)
+        iter.next
+        i += 1
       end
 
       return nil
@@ -245,18 +251,13 @@ module Containers
   class MutableList < List
 #    attr_reader :modification_count
 
-    def initialize(type, fill_elt)
-      super(type, fill_elt)
+    def initialize(type: Object, fill_elt: nil)
+      super(type: type, fill_elt: fill_elt)
       @modification_count = 0
     end
 
     def clear
       do_clear
-      count_modification
-    end
-
-    def reverse
-      do_reverse
       count_modification
     end
 
@@ -267,10 +268,6 @@ module Containers
 
     def do_clear
       raise NoMethodError, "#{self.class} does not implement do_clear()"
-    end
-
-    def do_reverse
-      raise NoMethodError, "#{self.class} does not implement do_reverse()"
     end
 
     def do_add(objs)
@@ -308,8 +305,8 @@ module Containers
   end
   
   class MutableLinkedList < MutableList
-    def initialize(type, fill_elt)
-      super(type, fill_elt)
+    def initialize(type: Object, fill_elt: nil)
+      super(type: type, fill_elt: fill_elt)
     end
 
     ##########################################Structural modification############################
@@ -371,7 +368,7 @@ module Containers
 
   class ArrayList < MutableList
     def initialize(type: Object, fill_elt: nil)
-      super(type, fill_elt)
+      super(type: type, fill_elt: fill_elt)
       @store = []
     end
 
@@ -407,7 +404,11 @@ module Containers
                                        start: start,
                                        modification_count: ->() {@modification_count})
     end
-    
+
+    def reverse
+      make_empty_list.add(*@store.reverse)
+    end
+
     private
     def do_clear
       @store = []
@@ -576,7 +577,7 @@ module Containers
 #    attr_reader :store
 
     def initialize(type: Object, fill_elt: nil)
-      super(type, fill_elt)
+      super(type: type, fill_elt: fill_elt)
       @store = nil
       @count = 0
     end
@@ -717,7 +718,7 @@ module Containers
 
   class SinglyLinkedListX < MutableLinkedList
     def initialize(type: Object, fill_elt: nil)
-      super(type, fill_elt)
+      super(type: type, fill_elt: fill_elt)
       @front = nil
       @rear = nil
       @count = 0
@@ -857,7 +858,7 @@ module Containers
     end
 
     def do_index(obj, test)
-      Node.index(@store, obj, test: test)
+      Node.index(@front, obj, test: test)
     end
 
     #
@@ -897,6 +898,11 @@ module Containers
     def link(succ)
       @succ = succ
       succ.pred = self
+    end
+
+    def unlink
+      @succ = nil
+      @pred = nil
     end
     
     def splice_before(obj)
@@ -1085,7 +1091,7 @@ module Containers
   #    
   class DcursorList < MutableLinkedList
     def initialize(type: Object, fill_elt: nil)
-      super(type, fill_elt)
+      super(type: type, fill_elt: fill_elt)
       @cursor = setup_cursor
     end
 
@@ -1395,7 +1401,7 @@ module Containers
       end
     end
 
-    def delete_dcons(doomed)
+    def delete_dcons(doomed, reset_store = ->(node) {node.succ})
       if doomed == doomed.succ
         doomed.succ = nil # Release for GC
         @store = nil
@@ -1403,7 +1409,7 @@ module Containers
       else
         result = doomed.excise_node
         if doomed == @store
-          @store = doomed.succ
+          @store = reset_store.call(doomed)
         end
 
         result
@@ -1467,6 +1473,11 @@ module Containers
     def initialize(type: Object, fill_elt: nil, direction: :forward)
       @direction = direction
       super(type: type, fill_elt: fill_elt) # super() call out of order?!?
+    end
+
+    def reverse
+      count_modification
+      do_reverse
     end
 
     private
@@ -1597,6 +1608,29 @@ module Containers
       end
     end
     
+    def delete_elt(i)
+      doomed = delete_ratchet_node(nth_dll_node(i))
+
+      @count -= 1
+      
+      doomed
+    end
+
+    def do_do_delete_node(doomed)
+      result = delete_ratchet_node(doomed)
+
+      @count -= 1
+      
+      result
+    end
+
+    def delete_ratchet_node(doomed)
+      case @direction
+      when :forward then delete_dcons(doomed, ->(node) {node.succ})
+      when :backward then delete_dcons(doomed, ->(node) {node.pred})
+      end
+    end
+
     #
     #    This is not really needed for DoublyLinkedList.
     #    
@@ -1646,6 +1680,8 @@ module Containers
       end
 
       @cursor = setup_cursor
+
+      self
     end
   end
 
@@ -1691,6 +1727,11 @@ module Containers
                                        start: start,
                                        modification_count: ->() {@modification_count},
                                        init: ->() {setup_cursor})
+    end
+
+    def reverse
+      count_modification
+      do_reverse
     end
 
     private
@@ -1903,12 +1944,14 @@ module Containers
       @head = previous_dnode(@head)
       @forward, @backward = @backward, @forward
       @cursor.reset
+
+      self
     end
   end
 
   class HashList < MutableList
     def initialize(type: Object, fill_elt: nil)
-      super(type, fill_elt)
+      super(type: type, fill_elt: fill_elt)
       @store = {}
     end
 
@@ -1963,18 +2006,26 @@ module Containers
       end
     end
 
-    def do_do_insert(i, obj)
-      size.downto(i+1) do |j|
-        @store[j] = @store[j-1]
+    def shift_up(low, high)
+      (high-1).downto(low) do |i|
+        @store[i+1] = @store[i]
       end
-      @store[i] = obj
+    end
+
+    def shift_down(low, high)
+      low.upto(high-1) do |i|
+        @store[i-1] = @store[i]
+      end
+    end
+
+    def do_do_insert(i, obj)
+      shift_up(i, size)
+      set(i, obj)
     end
 
     def do_do_delete(i)
       doomed = @store[i]
-      i.upto(size-2) do |j|
-        @store[j] = @store[j+1]
-      end
+      shift_down(i+1, size)
       @store.delete(size-1)
 
       doomed
@@ -2018,11 +2069,84 @@ module Containers
     end
   end
 
+  class HashListX < HashList
+    def initialize(type: Object, fill_elt: nil)
+      super(type: type, fill_elt: fill_elt)
+      @offset = 0
+    end
+
+    private
+    def do_clear
+      super
+      @offset = 0
+    end
+
+    def do_do_add(objs)
+      i = size + @offset
+      objs.each do |obj|
+        @store[i] = obj
+        i += 1
+      end
+    end
+
+    def shift_up(low, high)
+      super(low + @offset, high + @offset)
+    end
+
+    def shift_down(low, high)
+      super(low + @offset, high + @offset)
+    end
+
+    def do_do_insert(i, obj)
+      if i > (size / 2).floor
+        shift_up(i, size)
+      else
+        unless i.zero?
+          shift_down(0, i)
+        end
+
+        @offset -= 1
+      end
+
+      set(i, obj)
+    end
+
+    def do_do_delete(i)
+      doomed = get(i)
+      
+      if i > (size / 2).floor
+        shift_down(i + 1, size)
+        @store.delete(size - 1 + @offset)
+      else
+        unless i.zero?
+          shift_up(0, i)
+        end
+        
+        @store.delete(@offset)
+        @offset += 1
+      end
+      
+      doomed
+    end
+
+    def do_get(i)
+      @store[i + @offset]
+    end
+
+    def do_set(i, obj)
+      @store[i + @offset] = obj
+    end
+    
+    def make_empty_list
+      HashListX.new(type: type, fill_elt: fill_elt)
+    end
+  end
+
   class PersistentList < List
     attr_reader :store
 
     def initialize(type: Object, fill_elt: nil)
-      super(type, fill_elt)
+      super(type: type, fill_elt: fill_elt)
       @store = nil
       @count = 0
     end

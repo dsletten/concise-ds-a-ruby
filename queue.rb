@@ -41,6 +41,14 @@ module Containers
       do_front
     end
 
+    def fill(count: 1000, generator: ->(x) { x })
+      1.upto(count) do |i|
+        enqueue(generator.call(i))
+      end
+
+      self
+    end
+
     private
     def do_enqueue(obj)
       raise NoMethodError, "#{self.class} does not implement do_enqueue()"
@@ -61,8 +69,8 @@ module Containers
   #    
   class ArrayQueue < Queue
     ARRAY_QUEUE_CAPACITY = 20
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @store = Array.new(ARRAY_QUEUE_CAPACITY)
       @front = 0
       @count = 0
@@ -120,8 +128,8 @@ module Containers
   #    push() at end of array and shift() at front of array.
   #    
   class RubyQueue < Queue
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @store = []
     end
 
@@ -153,8 +161,8 @@ module Containers
 
   class LinkedQueue < Queue
     LINKED_QUEUE_CAPACITY = 20
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @front = nil
       @rear = nil
       @count = 0
@@ -204,8 +212,8 @@ module Containers
   end
 
   class LinkedListQueue < Queue
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @list = SinglyLinkedListX.new
     end
 
@@ -235,8 +243,8 @@ module Containers
   #    See ch. 6 exercise 5
   #
   class CircularQueue < Queue
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @index = nil
       @count = 0
     end
@@ -287,8 +295,8 @@ module Containers
   end
 
   class RecyclingQueue < LinkedQueue
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @front = Node.empty_list(LINKED_QUEUE_CAPACITY)
       @rear = @front
       @ass = @front.last
@@ -326,8 +334,8 @@ module Containers
   end
 
   class RingBuffer < LinkedQueue
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @front = Node.empty_list(LINKED_QUEUE_CAPACITY)
       @rear = @front
       @front.last.rest = @front
@@ -361,8 +369,8 @@ module Containers
   end
   
   class HashQueue < Queue
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @store = {}
       @front = 0
       @rear = 0
@@ -400,8 +408,8 @@ module Containers
   end
 
   class PersistentQueue < Queue
-    def initialize(type=Object) # Client can only create empty PersistentQueue
-      super(type)
+    def initialize(type: Object) # Client can only create empty PersistentQueue
+      super(type: type)
       @front = nil
       @rear = nil
       @count = 0
@@ -416,12 +424,22 @@ module Containers
     # end
 
     def clear
-      PersistentQueue.new(@type)
+      PersistentQueue.new(type: @type)
     end
     
+    def fill(count: 1000, generator: ->(x) { x })
+      queue = self
+      
+      1.upto(count) do |i|
+        queue.enqueue(generator.call(i))
+      end
+
+      queue
+    end
+
     protected
     def create_queue(front, rear, count)
-      queue = PersistentQueue.new(@type)
+      queue = PersistentQueue.new(type: @type)
       queue.front = front
       queue.rear = rear
       queue.count = count
@@ -468,8 +486,8 @@ module Containers
 
   class PersistentListQueue < Queue
     @@empty = PersistentList.new
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @list = @@empty
     end
 
@@ -478,9 +496,19 @@ module Containers
     end
 
     def clear
-      PersistentListQueue.new(@type)
+      PersistentListQueue.new(type: @type)
     end
     
+    def fill(count: 1000, generator: ->(x) { x })
+      queue = self
+      
+      1.upto(count) do |i|
+        queue.enqueue(generator.call(i))
+      end
+
+      queue
+    end
+
     protected
     #
     #    Writers only exist to adjust non-empty PersistentListQueue after creation.
@@ -492,7 +520,7 @@ module Containers
 
     private
     def create_queue(list)
-      queue = PersistentListQueue.new(@type)
+      queue = PersistentListQueue.new(type: @type)
       queue.list = list
 
       queue
@@ -552,8 +580,8 @@ module Containers
   end
 
   class DllDeque < Deque
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @list = DoublyLinkedList.new(type: type)
     end
     
@@ -592,8 +620,8 @@ module Containers
   end
 
   class HashDeque < Deque
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @store = {}
       @front = 0
       @rear = 0
@@ -642,8 +670,8 @@ module Containers
   end
 
   class PersistentDeque < Deque
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @front = nil
       @rear = nil
       @count = 0
@@ -654,12 +682,22 @@ module Containers
     end
 
     def clear
-      PersistentDeque.new(@type)
+      PersistentDeque.new(type: @type)
+    end
+
+    def fill(count: 1000, generator: ->(x) { x })
+      deque = self
+      
+      1.upto(count) do |i|
+        deque.enqueue(generator.call(i))
+      end
+
+      deque
     end
 
     protected
     def initialize_deque(front, rear, count)
-      dq = PersistentDeque.new(@type)
+      dq = PersistentDeque.new(type: @type)
       dq.front = front
       dq.rear = rear
       dq.count = count
@@ -731,8 +769,8 @@ module Containers
 
   class PersistentListDeque < Deque
     @@empty = PersistentList.new
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @list = @@empty
     end
 
@@ -741,7 +779,17 @@ module Containers
     end
 
     def clear
-      PersistentListDeque.new(@type)
+      PersistentListDeque.new(type: @type)
+    end
+
+    def fill(count: 1000, generator: ->(x) { x })
+      deque = self
+      
+      1.upto(count) do |i|
+        deque.enqueue(generator.call(i))
+      end
+
+      deque
     end
 
     protected
@@ -755,7 +803,7 @@ module Containers
 
     private
     def create_deque(list)
-      dq = PersistentListDeque.new(@type)
+      dq = PersistentListDeque.new(type: @type)
       dq.list = list
 
       dq

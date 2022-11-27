@@ -28,6 +28,14 @@ module Containers
       do_peek
     end
 
+    def fill(count: 1000, generator: ->(x) { x })
+      1.upto(count) do |i|
+        push(generator.call(i))
+      end
+
+      self
+    end
+
     private
     def do_push(obj)
       raise NoMethodError, "#{self.class} does not implement do_push()"
@@ -43,8 +51,8 @@ module Containers
   end
 
   class ArrayStack < Stack
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @store = []
     end
 
@@ -75,8 +83,8 @@ module Containers
   end
 
   class LinkedStack < Stack
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @top = nil
       @count = 0
     end
@@ -114,8 +122,8 @@ module Containers
   end
 
   class LinkedListStack < Stack
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @list = SinglyLinkedList.new
     end
 
@@ -146,8 +154,8 @@ module Containers
   end
 
   class HashStack < Stack
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @store = {}
     end
 
@@ -178,8 +186,8 @@ module Containers
   end
 
   class PersistentStack < Stack
-    def initialize(type=Object) # Client can only create empty PersistentStack
-      super(type)
+    def initialize(type: Object) # Client can only create empty PersistentStack
+      super(type: type)
       @top = nil
       @count = 0
     end
@@ -193,9 +201,18 @@ module Containers
     end
 
     def clear
-      PersistentStack.new(@type)
+      PersistentStack.new(type: @type)
     end
     
+    def fill(count: 1000, generator: ->(x) { x })
+      stack = self
+      1.upto(count) do |i|
+        stack = stack.push(generator.call(i))
+      end
+
+      stack
+    end
+
     protected
     def top=(node)
       @top = node
@@ -207,7 +224,7 @@ module Containers
 
     private
     def create_stack(top, count)
-      stack = PersistentStack.new(@type)
+      stack = PersistentStack.new(type: @type)
       stack.top = top
       stack.count = count
       stack
@@ -229,8 +246,8 @@ module Containers
   class PersistentListStack < Stack
     @@empty = PersistentList.new
     
-    def initialize(type=Object)
-      super(type)
+    def initialize(type: Object)
+      super(type: type)
       @list = @@empty
     end
 
@@ -243,7 +260,16 @@ module Containers
     end
 
     def clear
-      PersistentListStack.new(@type)
+      PersistentListStack.new(type: @type)
+    end
+
+    def fill(count: 1000, generator: ->(x) { x })
+      stack = self
+      1.upto(count) do |i|
+        stack = stack.push(generator.call(i))
+      end
+
+      stack
     end
 
     protected
@@ -253,7 +279,7 @@ module Containers
     
     private
     def create_stack(list)
-      stack = PersistentListStack.new(@type)
+      stack = PersistentListStack.new(type: @type)
       stack.list = list
 
       stack

@@ -25,8 +25,9 @@ Yes. Elements can only be added at the end. There are no retrieval access restri
 c) Does a Log provide keyed access? If so, what is the key?
 Yes. The timestamp.
 d) In the container hierarchy, would a Log be a Collection or a Dispenser?
-The Log is potentially traversable if there is a meaningful way of iterating over timestamps. But this is not really a fundamental property of the container. It seems more appropriate to consider it
-a Dispenser.
+The Log is potentially traversable if there is a meaningful way of iterating over timestamps. [But this is not really a fundamental property of the container. It seems more appropriate to consider it
+a Dispenser.]
+The Log should have an iterator that allows traversal.
 
 2. Consider a kind of Container called a Shoe used in an automated Baccarat program. When a Shoe instance is created, it contains eight decks of Cards in random order. Cards can be removed one at a time from 
 the front of a Shoe. Cards cannot be placed in a Shoe, modified, or removed from any other spot. No Cards in a Shoe can be examined.

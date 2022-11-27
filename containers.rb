@@ -15,7 +15,7 @@ module Containers
   class Container
     attr_reader :type
 
-    def initialize(type)
+    def initialize(type: Object)
       @type = type
     end
     
@@ -56,16 +56,30 @@ module Containers
       node
     end
 
+    def to_s
+      car_print(@first) + cdr_print(@rest)
+    end
+
     #
     #    Can't be instance method in case node is nil????
     #    
+    # def self.nth(node, i)
+    #   if node.nil?
+    #     nil
+    #   elsif i.zero?
+    #     node.first
+    #   else
+    #     nth(node.rest, i - 1)
+    #   end
+    # end
+    
     def self.nth(node, i)
-      if node.nil?
+      nth_node = nthcdr(node, i)
+      
+      if nth_node.nil?
         nil
-      elsif i.zero?
-        node.first
       else
-        nth(node.rest, i - 1)
+        nth_node.first
       end
     end
     
@@ -76,23 +90,44 @@ module Containers
       
 #    def self.nth=(node, i, obj)
     def self.set_nth(node, i, obj)
-      if node.nil?
+      nth_node = nthcdr(node, i)
+      
+      if nth_node.nil?
         nil
-      elsif i.zero?
-        node.first = obj
       else
-        set_nth(node.rest, i - 1, obj)
+        nth_node.first = obj
       end
+      # if node.nil?
+      #   nil
+      # elsif i.zero?
+      #   node.first = obj
+      # else
+      #   set_nth(node.rest, i - 1, obj)
+      # end
     end
 
+    # def self.nthcdr(node, i)
+    #   if node.nil?
+    #     nil
+    #   elsif i.zero?
+    #     node
+    #   else
+    #     nthcdr(node.rest, i - 1)
+    #   end
+    # end
+    
     def self.nthcdr(node, i)
-      if node.nil?
-        nil
-      elsif i.zero?
-        node
-      else
-        nthcdr(node.rest, i - 1)
+      raise ArgumentError.new("Invalid index: #{i}") if i < 0
+
+      j = 0
+      until i == j
+        return nil if node.nil?
+
+        node = node.rest
+        j += 1
       end
+
+      node
     end
     
     def self.empty_list(count)
@@ -125,6 +160,7 @@ module Containers
       result = []
       n.times do
         return result if head.nil?
+
         result << head.first
         head = head.rest
       end
@@ -132,19 +168,42 @@ module Containers
       result
     end
 
+#     def self.include?(node, obj, test: ->(x, y) {x == y})
+#       if node.nil?
+#         nil
+# #      elsif node.first == obj
+#       elsif test.call(obj, node.first)
+#         node.first
+#       else
+#         include?(node.rest, obj, test: test)
+#       end
+#     end
+
     def self.include?(node, obj, test: ->(x, y) {x == y})
-      if node.nil?
-        nil
-#      elsif node.first == obj
-      elsif test.call(obj, node.first)
-        node.first
-      else
-        include?(node.rest, obj, test: test)
+      until node.nil?
+        return node.first if test.call(obj, node.first)
+
+        node = node.rest
       end
+
+      nil
     end
 
+    # def self.index(node, obj, test: ->(x, y) {x == y})
+    #   _index(node, obj, 0, test)
+    # end
+
     def self.index(node, obj, test: ->(x, y) {x == y})
-      _index(node, obj, 0, test)
+      i = 0
+      until node.nil?
+        return i if test.call(obj, node.first)
+
+        node = node.rest
+        i += 1
+      end
+
+      nil
+
     end
 
     def self.append(l1, l2)
@@ -164,8 +223,20 @@ module Containers
       end
     end
 
+    # def self.reverse(list)
+    #   _reverse(list, nil)
+    # end
+
     def self.reverse(list)
-      _reverse(list, nil)
+      result = null
+      node = list
+
+      until node.nil?
+        result = Node.new(node.first, result)
+        node = node.rest
+      end
+
+      result
     end
 
     def splice_before(obj)
@@ -206,6 +277,20 @@ module Containers
     end
 
     private
+    def car_print(obj)
+      "(#{obj}"
+    end
+
+    def cdr_print(obj)
+      if obj.nil?
+        ")"
+      elsif !obj.is_a?(Node)
+        " . #{obj})"
+      else
+        " #{obj.first()}" + cdr_print(obj.rest())
+      end
+    end
+
     def self._index(node, obj, i, test)
       if node.nil?
         nil
@@ -216,13 +301,13 @@ module Containers
       end
     end
 
-    def self._reverse(list, result)
-      if list.nil?
-        result
-      else
-        _reverse(list.rest, Node.new(list.first, result))
-      end
-    end
+    # def self._reverse(list, result)
+    #   if list.nil?
+    #     result
+    #   else
+    #     _reverse(list.rest, Node.new(list.first, result))
+    #   end
+    # end
   end
   
   class Collection < Container
@@ -245,15 +330,17 @@ module Containers
 
     private
     def do_contains?(obj, test)
-      i = iterator
+      iter = iterator
 
-      until i.done?
-        elt = i.current
+      until iter.done?
+        elt = iter.current
+
         return elt if test.call(obj, elt)
-        i.next
+
+        iter.next
       end
 
-      return nil
+      nil
     end
   end
 
