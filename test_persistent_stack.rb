@@ -116,9 +116,9 @@ class TestStack < Test::Unit::TestCase # Conflict with test_stack.rb???
   end
 end
 
-class TestPersistentStack < TestStack
+class TestPersistentLinkedStack < TestStack
   def test_it
-    constructor = lambda {|type: Object| Containers::PersistentStack.new(type: type)}
+    constructor = lambda {|type: Object| Containers::PersistentLinkedStack.new(type: type)}
 
     test_constructor(constructor)
     test_empty?(constructor)
