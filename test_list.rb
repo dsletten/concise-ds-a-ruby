@@ -40,8 +40,21 @@ class TestList < Test::Unit::TestCase
     count = 1000
     list = constructor.call
     assert(list.size.zero?, "Size of new list should be zero.")
+
     1.upto(count) do |i|
       list.add(i)
+      assert_equal(i, list.size, "Size of list should be #{i}")
+    end
+
+    (count-1).downto(0) do |i|
+      list.delete(-1)
+      assert_equal(i, list.size, "Size of list should be #{i}")
+    end
+
+    assert(list.size.zero?, "Size of empty list should be zero.")
+
+    1.upto(count) do |i|
+      list.insert(0, i)
       assert_equal(i, list.size, "Size of list should be #{i}")
     end
 
@@ -63,12 +76,15 @@ class TestList < Test::Unit::TestCase
     assert(list.size.zero?, "Size of empty list should be zero.")
   end
 
-  # def fill(list, count)
-  #   # 1.upto(count) do |i|
-  #   #   list.add(i)
-  #   # end
-  #   list.add(*((1..count).to_a))
-  # end
+  def test_elements(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
+    expected = (1..count).to_a
+    elts = list.elements
+
+    assert(expected == elts, "FIFO elements should be #{expected[0, 10]} not #{elts[0, 10]}")
+    assert(list.empty?, "Mutable list should be empty after elements are extracted.")
+  end
 
   def test_contains?(constructor)
     count = 1000
@@ -177,7 +193,7 @@ class TestList < Test::Unit::TestCase
   
 #  def test_insert(constructor, fill_elt=nil)            # ?????????????????????????????????????????????????????????
   def _test_insert(constructor, fill_elt)
-    list = constructor.call(Object, fill_elt)
+    list = constructor.call(type: Object, fill_elt: fill_elt)
     count = 6
     elt1 = :foo
     elt2 = :bar
@@ -280,10 +296,9 @@ class TestList < Test::Unit::TestCase
     count = 1000
     list = constructor.call.fill(count: count)
 
-    (count-1).downto(0) do |i|
+    list.size.times do
       expected = list.get(0)
       doomed = list.delete(0)
-      assert_equal(i, list.size, "List size should reflect deletions")
       assert_equal(expected, doomed, "Incorrect deleted value returned: #{doomed} rather than #{expected}")
     end
     
@@ -298,15 +313,13 @@ class TestList < Test::Unit::TestCase
     end
     
     assert(list.empty?, "Empty list should be empty.")
-  end
 
-  def test_delete_negative_index(constructor)
-    count = 1000
     list = constructor.call.fill(count: count)
 
-    count.downto(1) do |i|
+    list.size.times do
       expected = list.get(-1)
-      assert_equal(expected, list.delete(-1), "Deleted element should be last in list")
+      doomed = list.delete(-1)
+      assert_equal(expected, doomed, "Incorrect deleted value returned: #{doomed} rather than #{expected}")
     end
     
     assert(list.empty?, "Empty list should be empty.")
@@ -330,6 +343,23 @@ class TestList < Test::Unit::TestCase
     assert_equal(high_index + 4, list.get(high_index), "Element #{high_index} should be #{high_index + 4} not #{list.get(high_index)}")
   end
 
+  def test_delete_random(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
+#    random = Random.new
+
+    count.times do
+#      i = random.rand(list.size)
+      i = rand(list.size)
+      expected = list.get(i)
+      doomed = list.delete(i)
+
+      assert_equal(expected, doomed, "Incorrect deleted value returned: #{doomed} rather than #{expected}")
+    end
+    
+    assert(list.empty?, "Empty list should be empty.")
+  end
+    
   def test_get(constructor)
     count = 1000
     list = constructor.call.fill(count: count)
@@ -607,307 +637,89 @@ return
 
 end
 
+def list_test_suite(tester, constructor)
+  puts("Testing #{constructor.call.class}")
+  tester.test_constructor(constructor)
+  tester.test_empty?(constructor)
+  tester.test_size(constructor)
+  tester.test_clear(constructor)
+  tester.test_elements(constructor)
+  tester.test_contains?(constructor)
+  tester.test_contains_predicate(constructor)
+  tester.test_contains_arithmetic(constructor)
+  tester.test_equals(constructor)
+  tester.test_equals_predicate(constructor)
+  tester.test_equals_transform(constructor)
+  tester.test_each(constructor)
+  tester.test_add(constructor)
+  tester.test_insert(constructor)
+  tester.test_insert_fill_zero(constructor)
+  tester.test_insert_negative_index(constructor)
+  tester.test_insert_end(constructor)
+  tester.test_insert_offset(constructor)
+  tester.test_delete(constructor)
+  tester.test_delete_offset(constructor)
+  tester.test_delete_random(constructor)
+  tester.test_get(constructor)
+  tester.test_get_negative_index(constructor)
+  tester.test_set(constructor)
+  tester.test_set_negative_index(constructor)
+  tester.test_set_out_of_bounds(constructor)
+  tester.test_index(constructor)
+  tester.test_index_predicate(constructor)
+  tester.test_index_arithmetic(constructor)
+  tester.test_slice(constructor)
+  tester.test_slice_negative_index(constructor)
+  tester.test_slice_corner_cases(constructor)
+  tester.test_reverse(constructor)
+  tester.test_time(constructor)
+end
+  
 class TestArrayList < TestList
   def test_it
-    test_constructor(lambda {Containers::ArrayList.new})
-    test_empty?(lambda {Containers::ArrayList.new})
-    test_size(lambda {Containers::ArrayList.new})
-    test_clear(lambda {Containers::ArrayList.new})
-    test_contains?(lambda {Containers::ArrayList.new})
-    test_contains_predicate(lambda {Containers::ArrayList.new})
-    test_contains_arithmetic(lambda {Containers::ArrayList.new})
-    test_equals(lambda {Containers::ArrayList.new})
-    test_equals_predicate(lambda {Containers::ArrayList.new})
-    test_equals_transform(lambda {Containers::ArrayList.new})
-    test_each(lambda {Containers::ArrayList.new})
-    test_add(lambda {Containers::ArrayList.new})
-    test_insert(lambda {|type, fill_elt| Containers::ArrayList.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::ArrayList.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::ArrayList.new})
-    test_insert_end(lambda {Containers::ArrayList.new})
-    test_insert_offset(lambda {Containers::ArrayList.new})
-    test_delete(lambda {Containers::ArrayList.new})
-    test_delete_negative_index(lambda {Containers::ArrayList.new})
-    test_delete_offset(lambda {Containers::ArrayList.new})
-    test_get(lambda {Containers::ArrayList.new})
-    test_get_negative_index(lambda {Containers::ArrayList.new})
-    test_set(lambda {Containers::ArrayList.new})
-    test_set_negative_index(lambda {Containers::ArrayList.new})
-    test_set_out_of_bounds(lambda {Containers::ArrayList.new})
-    test_index(lambda {Containers::ArrayList.new})
-    test_index_predicate(lambda {Containers::ArrayList.new})
-    test_index_arithmetic(lambda {Containers::ArrayList.new})
-    test_slice(lambda {Containers::ArrayList.new})
-    test_slice_negative_index(lambda {Containers::ArrayList.new})
-    test_slice_corner_cases(lambda {Containers::ArrayList.new})
-    test_reverse(lambda {Containers::ArrayList.new})
-    test_time(lambda {puts("ArrayList"); Containers::ArrayList.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::ArrayList.new(type: type, fill_elt: fill_elt)})
   end
 end
 
 class TestSinglyLinkedList < TestList
   def test_it
-    test_constructor(lambda {Containers::SinglyLinkedList.new})
-    test_empty?(lambda {Containers::SinglyLinkedList.new})
-    test_size(lambda {Containers::SinglyLinkedList.new})
-    test_clear(lambda {Containers::SinglyLinkedList.new})
-    test_contains?(lambda {Containers::SinglyLinkedList.new})
-    test_contains_predicate(lambda {Containers::SinglyLinkedList.new})
-    test_contains_arithmetic(lambda {Containers::SinglyLinkedList.new})
-    test_equals(lambda {Containers::SinglyLinkedList.new})
-    test_equals_predicate(lambda {Containers::SinglyLinkedList.new})
-    test_equals_transform(lambda {Containers::SinglyLinkedList.new})
-    test_each(lambda {Containers::SinglyLinkedList.new})
-    test_add(lambda {Containers::SinglyLinkedList.new})
-    test_insert(lambda {|type, fill_elt| Containers::SinglyLinkedList.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::SinglyLinkedList.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::SinglyLinkedList.new})
-    test_insert_end(lambda {Containers::SinglyLinkedList.new})
-    test_insert_offset(lambda {Containers::SinglyLinkedList.new})
-    test_delete(lambda {Containers::SinglyLinkedList.new})
-    test_delete_negative_index(lambda {Containers::SinglyLinkedList.new})
-    test_delete_offset(lambda {Containers::SinglyLinkedList.new})
-    test_get(lambda {Containers::SinglyLinkedList.new})
-    test_get_negative_index(lambda {Containers::SinglyLinkedList.new})
-    test_set(lambda {Containers::SinglyLinkedList.new})
-    test_set_negative_index(lambda {Containers::SinglyLinkedList.new})
-    test_set_out_of_bounds(lambda {Containers::SinglyLinkedList.new})
-    test_index(lambda {Containers::SinglyLinkedList.new})
-    test_index_predicate(lambda {Containers::SinglyLinkedList.new})
-    test_index_arithmetic(lambda {Containers::SinglyLinkedList.new})
-    test_slice(lambda {Containers::SinglyLinkedList.new})
-    test_slice_negative_index(lambda {Containers::SinglyLinkedList.new})
-    test_slice_corner_cases(lambda {Containers::SinglyLinkedList.new})
-    test_reverse(lambda {Containers::SinglyLinkedList.new})
-    test_time(lambda {puts("SinglyLinkedList"); Containers::SinglyLinkedList.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::SinglyLinkedList.new(type: type, fill_elt: fill_elt)})
   end
 end
 
 class TestSinglyLinkedListX < TestList
   def test_it
-    test_constructor(lambda {Containers::SinglyLinkedListX.new})
-    test_empty?(lambda {Containers::SinglyLinkedListX.new})
-    test_size(lambda {Containers::SinglyLinkedListX.new})
-    test_clear(lambda {Containers::SinglyLinkedListX.new})
-    test_contains?(lambda {Containers::SinglyLinkedListX.new})
-    test_contains_predicate(lambda {Containers::SinglyLinkedListX.new})
-    test_contains_arithmetic(lambda {Containers::SinglyLinkedListX.new})
-    test_equals(lambda {Containers::SinglyLinkedListX.new})
-    test_equals_predicate(lambda {Containers::SinglyLinkedListX.new})
-    test_equals_transform(lambda {Containers::SinglyLinkedListX.new})
-    test_each(lambda {Containers::SinglyLinkedListX.new})
-    test_add(lambda {Containers::SinglyLinkedListX.new})
-    test_insert(lambda {|type, fill_elt| Containers::SinglyLinkedListX.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::SinglyLinkedListX.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::SinglyLinkedListX.new})
-    test_insert_end(lambda {Containers::SinglyLinkedListX.new})
-    test_insert_offset(lambda {Containers::SinglyLinkedListX.new})
-    test_delete(lambda {Containers::SinglyLinkedListX.new})
-    test_delete_negative_index(lambda {Containers::SinglyLinkedListX.new})
-    test_delete_offset(lambda {Containers::SinglyLinkedListX.new})
-    test_get(lambda {Containers::SinglyLinkedListX.new})
-    test_get_negative_index(lambda {Containers::SinglyLinkedListX.new})
-    test_set(lambda {Containers::SinglyLinkedListX.new})
-    test_set_negative_index(lambda {Containers::SinglyLinkedListX.new})
-    test_set_out_of_bounds(lambda {Containers::SinglyLinkedListX.new})
-    test_index(lambda {Containers::SinglyLinkedListX.new})
-    test_index_predicate(lambda {Containers::SinglyLinkedListX.new})
-    test_index_arithmetic(lambda {Containers::SinglyLinkedListX.new})
-    test_slice(lambda {Containers::SinglyLinkedListX.new})
-    test_slice_negative_index(lambda {Containers::SinglyLinkedListX.new})
-    test_slice_corner_cases(lambda {Containers::SinglyLinkedListX.new})
-    test_reverse(lambda {Containers::SinglyLinkedListX.new})
-    test_time(lambda {puts("SinglyLinkedListX"); Containers::SinglyLinkedListX.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::SinglyLinkedListX.new(type: type, fill_elt: fill_elt)})
   end
 end
 
 class TestDoublyLinkedList < TestList
   def test_it
-    test_constructor(lambda {Containers::DoublyLinkedList.new})
-    test_empty?(lambda {Containers::DoublyLinkedList.new})
-    test_size(lambda {Containers::DoublyLinkedList.new})
-    test_clear(lambda {Containers::DoublyLinkedList.new})
-    test_contains?(lambda {Containers::DoublyLinkedList.new})
-    test_contains_predicate(lambda {Containers::DoublyLinkedList.new})
-    test_contains_arithmetic(lambda {Containers::DoublyLinkedList.new})
-    test_equals(lambda {Containers::DoublyLinkedList.new})
-    test_equals_predicate(lambda {Containers::DoublyLinkedList.new})
-    test_equals_transform(lambda {Containers::DoublyLinkedList.new})
-    test_each(lambda {Containers::DoublyLinkedList.new})
-    test_add(lambda {Containers::DoublyLinkedList.new})
-    test_insert(lambda {|type, fill_elt| Containers::DoublyLinkedList.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::DoublyLinkedList.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::DoublyLinkedList.new})
-    test_insert_end(lambda {Containers::DoublyLinkedList.new})
-    test_insert_offset(lambda {Containers::DoublyLinkedList.new})
-    test_delete(lambda {Containers::DoublyLinkedList.new})
-    test_delete_negative_index(lambda {Containers::DoublyLinkedList.new})
-    test_delete_offset(lambda {Containers::DoublyLinkedList.new})
-    test_get(lambda {Containers::DoublyLinkedList.new})
-    test_get_negative_index(lambda {Containers::DoublyLinkedList.new})
-    test_set(lambda {Containers::DoublyLinkedList.new})
-    test_set_negative_index(lambda {Containers::DoublyLinkedList.new})
-    test_set_out_of_bounds(lambda {Containers::DoublyLinkedList.new})
-    test_index(lambda {Containers::DoublyLinkedList.new})
-    test_index_predicate(lambda {Containers::DoublyLinkedList.new})
-    test_index_arithmetic(lambda {Containers::DoublyLinkedList.new})
-    test_slice(lambda {Containers::DoublyLinkedList.new})
-    test_slice_negative_index(lambda {Containers::DoublyLinkedList.new})
-    test_slice_corner_cases(lambda {Containers::DoublyLinkedList.new})
-    test_reverse(lambda {Containers::DoublyLinkedList.new})
-    test_time(lambda {puts("DoublyLinkedList"); Containers::DoublyLinkedList.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::DoublyLinkedList.new(type: type, fill_elt: fill_elt)})
   end
 end
 
 class TestDoublyLinkedListRatchet < TestList
   def test_it
-    test_constructor(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_empty?(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_size(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_clear(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_contains?(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_contains_predicate(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_contains_arithmetic(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_equals(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_equals_predicate(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_equals_transform(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_each(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_add(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_insert(lambda {|type, fill_elt| Containers::DoublyLinkedListRatchet.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::DoublyLinkedListRatchet.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_insert_end(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_insert_offset(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_delete(lambda {Containers::DoublyLinkedListRatchet.new(direction: :backward)})
-    test_delete_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_delete_offset(lambda {Containers::DoublyLinkedListRatchet.new(direction: :backward)})
-    test_get(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_get_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_set(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_set_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_set_out_of_bounds(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_index(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_index_predicate(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_index_arithmetic(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_slice(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_slice_negative_index(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_slice_corner_cases(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_reverse(lambda {Containers::DoublyLinkedListRatchet.new})
-    test_time(lambda {puts("DoublyLinkedListRatchet"); Containers::DoublyLinkedListRatchet.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::DoublyLinkedListRatchet.new(type: type, fill_elt: fill_elt)})
   end
 end
 
 class TestDoublyLinkedListHash < TestList
   def test_it
-    test_constructor(lambda {Containers::DoublyLinkedListHash.new})
-    test_empty?(lambda {Containers::DoublyLinkedListHash.new})
-    test_size(lambda {Containers::DoublyLinkedListHash.new})
-    test_clear(lambda {Containers::DoublyLinkedListHash.new})
-    test_contains?(lambda {Containers::DoublyLinkedListHash.new})
-    test_contains_predicate(lambda {Containers::DoublyLinkedListHash.new})
-    test_contains_arithmetic(lambda {Containers::DoublyLinkedListHash.new})
-    test_equals(lambda {Containers::DoublyLinkedListHash.new})
-    test_equals_predicate(lambda {Containers::DoublyLinkedListHash.new})
-    test_equals_transform(lambda {Containers::DoublyLinkedListHash.new})
-    test_each(lambda {Containers::DoublyLinkedListHash.new})
-    test_add(lambda {Containers::DoublyLinkedListHash.new})
-    test_insert(lambda {|type, fill_elt| Containers::DoublyLinkedListHash.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::DoublyLinkedListHash.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::DoublyLinkedListHash.new})
-    test_insert_end(lambda {Containers::DoublyLinkedListHash.new})
-    test_insert_offset(lambda {Containers::DoublyLinkedListHash.new})
-    test_delete(lambda {Containers::DoublyLinkedListHash.new})
-    test_delete_negative_index(lambda {Containers::DoublyLinkedListHash.new})
-    test_delete_offset(lambda {Containers::DoublyLinkedListHash.new})
-    test_get(lambda {Containers::DoublyLinkedListHash.new})
-    test_get_negative_index(lambda {Containers::DoublyLinkedListHash.new})
-    test_set(lambda {Containers::DoublyLinkedListHash.new})
-    test_set_negative_index(lambda {Containers::DoublyLinkedListHash.new})
-    test_set_out_of_bounds(lambda {Containers::DoublyLinkedListHash.new})
-    test_index(lambda {Containers::DoublyLinkedListHash.new})
-    test_index_predicate(lambda {Containers::DoublyLinkedListHash.new})
-    test_index_arithmetic(lambda {Containers::DoublyLinkedListHash.new})
-    test_slice(lambda {Containers::DoublyLinkedListHash.new})
-    test_slice_negative_index(lambda {Containers::DoublyLinkedListHash.new})
-    test_slice_corner_cases(lambda {Containers::DoublyLinkedListHash.new})
-    test_reverse(lambda {Containers::DoublyLinkedListHash.new})
-    test_time(lambda {puts("DoublyLinkedListHash"); Containers::DoublyLinkedListHash.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::DoublyLinkedListHash.new(type: type, fill_elt: fill_elt)})
   end
 end
 
 class TestHashList < TestList
   def test_it
-    test_constructor(lambda {Containers::HashList.new})
-    test_empty?(lambda {Containers::HashList.new})
-    test_size(lambda {Containers::HashList.new})
-    test_clear(lambda {Containers::HashList.new})
-    test_contains?(lambda {Containers::HashList.new})
-    test_contains_predicate(lambda {Containers::HashList.new})
-    test_contains_arithmetic(lambda {Containers::HashList.new})
-    test_equals(lambda {Containers::HashList.new})
-    test_equals_predicate(lambda {Containers::HashList.new})
-    test_equals_transform(lambda {Containers::HashList.new})
-    test_each(lambda {Containers::HashList.new})
-    test_add(lambda {Containers::HashList.new})
-    test_insert(lambda {|type, fill_elt| Containers::HashList.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::HashList.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::HashList.new})
-    test_insert_end(lambda {Containers::HashList.new})
-    test_insert_offset(lambda {Containers::HashList.new})
-    test_delete(lambda {Containers::HashList.new})
-    test_delete_negative_index(lambda {Containers::HashList.new})
-    test_delete_offset(lambda {Containers::HashList.new})
-    test_get(lambda {Containers::HashList.new})
-    test_get_negative_index(lambda {Containers::HashList.new})
-    test_set(lambda {Containers::HashList.new})
-    test_set_negative_index(lambda {Containers::HashList.new})
-    test_set_out_of_bounds(lambda {Containers::HashList.new})
-    test_index(lambda {Containers::HashList.new})
-    test_index_predicate(lambda {Containers::HashList.new})
-    test_index_arithmetic(lambda {Containers::HashList.new})
-    test_slice(lambda {Containers::HashList.new})
-    test_slice_negative_index(lambda {Containers::HashList.new})
-    test_slice_corner_cases(lambda {Containers::HashList.new})
-    test_reverse(lambda {Containers::HashList.new})
-    test_time(lambda {puts("HashList"); Containers::HashList.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::HashList.new(type: type, fill_elt: fill_elt)})
   end
 end
 
 class TestHashListX < TestList
   def test_it
-    test_constructor(lambda {Containers::HashListX.new})
-    test_empty?(lambda {Containers::HashListX.new})
-    test_size(lambda {Containers::HashListX.new})
-    test_clear(lambda {Containers::HashListX.new})
-    test_contains?(lambda {Containers::HashListX.new})
-    test_contains_predicate(lambda {Containers::HashListX.new})
-    test_contains_arithmetic(lambda {Containers::HashListX.new})
-    test_equals(lambda {Containers::HashListX.new})
-    test_equals_predicate(lambda {Containers::HashListX.new})
-    test_equals_transform(lambda {Containers::HashListX.new})
-    test_each(lambda {Containers::HashListX.new})
-    test_add(lambda {Containers::HashListX.new})
-    test_insert(lambda {|type, fill_elt| Containers::HashListX.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::HashListX.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::HashListX.new})
-    test_insert_end(lambda {Containers::HashListX.new})
-    test_insert_offset(lambda {Containers::HashListX.new})
-    test_delete(lambda {Containers::HashListX.new})
-    test_delete_negative_index(lambda {Containers::HashListX.new})
-    test_delete_offset(lambda {Containers::HashListX.new})
-    test_get(lambda {Containers::HashListX.new})
-    test_get_negative_index(lambda {Containers::HashListX.new})
-    test_set(lambda {Containers::HashListX.new})
-    test_set_negative_index(lambda {Containers::HashListX.new})
-    test_set_out_of_bounds(lambda {Containers::HashListX.new})
-    test_index(lambda {Containers::HashListX.new})
-    test_index_predicate(lambda {Containers::HashListX.new})
-    test_index_arithmetic(lambda {Containers::HashListX.new})
-    test_slice(lambda {Containers::HashListX.new})
-    test_slice_negative_index(lambda {Containers::HashListX.new})
-    test_slice_corner_cases(lambda {Containers::HashListX.new})
-    test_reverse(lambda {Containers::HashListX.new})
-    test_time(lambda {puts("HashListX"); Containers::HashListX.new})
+    list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::HashListX.new(type: type, fill_elt: fill_elt)})
   end
 end
 

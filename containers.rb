@@ -30,6 +30,10 @@ module Containers
     def clear
       raise NoMethodError, "#{self.class} does not implement clear()"
     end
+
+    def elements
+      raise NoMethodError, "#{self.class} does not implement elements()"
+    end
   end
 
   class Dispenser < Container
@@ -228,7 +232,7 @@ module Containers
     # end
 
     def self.reverse(list)
-      result = null
+      result = nil
       node = list
 
       until node.nil?

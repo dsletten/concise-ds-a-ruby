@@ -28,16 +28,33 @@ class TestList < Test::Unit::TestCase
   def test_empty?(constructor)
     list = constructor.call
     assert(list.empty?, "New list should be empty.")
-    assert(!list.add(:foo).empty?, "List with elt should not be empty.")
-    assert(list.add(:foo).delete(0).empty?, "Empty list should be empty.")
+
+    list = list.add(:foo)
+    assert(!list.empty?, "List with elt should not be empty.")
+
+    list = list.delete(0)
+    assert(list.empty?, "Empty list should be empty.")
   end
 
   def test_size(constructor)
     count = 1000
     list = constructor.call
     assert(list.size.zero?, "Size of new list should be zero.")
+
     1.upto(count) do |i|
       list = list.add(i)
+      assert_equal(i, list.size, "Size of list should be #{i}")
+    end
+
+    (count-1).downto(0) do |i|
+      list = list.delete(-1)
+      assert_equal(i, list.size, "Size of list should be #{i}")
+    end
+
+    assert(list.size.zero?, "Size of empty list should be zero.")
+
+    1.upto(count) do |i|
+      list = list.insert(0, i)
       assert_equal(i, list.size, "Size of list should be #{i}")
     end
 
@@ -54,9 +71,19 @@ class TestList < Test::Unit::TestCase
     list = constructor.call.fill(count: count)
 
     assert(!list.empty?, "List should have #{count} elements.")
+
     list = list.clear
     assert(list.empty?, "List should be empty.")
     assert(list.size.zero?, "Size of empty list should be zero.")
+  end
+
+  def test_elements(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
+    expected = (1..count).to_a
+    elts = list.elements
+
+    assert(expected == elts, "FIFO elements should be #{expected[0, 10]} not #{elts[0, 10]}")
   end
 
   def test_contains?(constructor)
@@ -175,7 +202,7 @@ class TestList < Test::Unit::TestCase
   end
   
   def _test_insert(constructor, fill_elt)
-    list = constructor.call(Object, fill_elt)
+    list = constructor.call(type: Object, fill_elt: fill_elt)
     count = 6
     elt1 = :foo
     elt2 = :bar
@@ -257,36 +284,34 @@ class TestList < Test::Unit::TestCase
     count = 1000
     list = constructor.call.fill(count: count)
 
-    j = 1
-    count.downto(1) do |i|
-      doomed = list.delete(0)
-      assert_equal(i-1, list.size, "List size should reflect deletions")
-      assert_equal(j, doomed, "Incorrect deleted value returned: #{doomed} rather than #{j}")
-      j += 1
+    1.upto(count) do |i|
+      elt = list.get(0)
+      assert_equal(i, elt, "Incorrect value at front of list: #{elt} rather than #{i}")
+      list = list.delete(0)
     end
-    
+
     assert(list.empty?, "Empty list should be empty.")
 
     list = constructor.call.fill(count: count)
 
     count.downto(1) do |i|
-      doomed = list.delete(i-1)
-      assert_equal(doomed, i, "Incorrect deleted value returned: #{doomed} rather than #{i}")
+      elt = list.get(i - 1)
+      assert_equal(i, elt, "Incorrect value at end of list: #{elt} rather than #{i}")
+      list = list.delete(i - 1)
     end
-    
+
+    assert(list.empty?, "Empty list should be empty.")
+
+    list = constructor.call.fill(count: count)
+
+    count.downto(1) do |i|
+      elt = list.get(-1)
+      assert_equal(i, elt, "Incorrect value at end of list: #{elt} rather than #{i}")
+      list = list.delete(-1)
+    end
+
     assert(list.empty?, "Empty list should be empty.")
   end
-
-#   def test_delete_negative_index(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
-
-#     count.downto(1) do |i|
-#       assert_equal(list.delete(-1), i, "Deleted element should be last in list")
-#     end
-    
-#     assert(list.empty?, "Empty list should be empty.")
-#   end
 
 #   def test_delete_offset(constructor)
 #     count = 1000
@@ -306,6 +331,21 @@ class TestList < Test::Unit::TestCase
 #     assert_equal(high_index + 4, list.get(high_index), "Element #{high_index} should be #{high_index + 4} not #{list.get(high_index)}")
 #   end
 
+  def test_delete_random(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
+
+    count.times do
+      i = rand(list.size)
+      expected = list.get(i)
+      list = list.delete(i)
+
+      assert(!list.contains(expected), "Element #{i} should have been deleted: #{expected}")
+    end
+    
+    assert(list.empty?, "Empty list should be empty.")
+  end
+    
 #   def test_get(constructor)
 #     count = 1000
 #     list = constructor.call.fill(count: count)
@@ -583,39 +623,77 @@ class TestList < Test::Unit::TestCase
 
 end
 
+def persistent_list_test_suite(tester, constructor)
+  puts("Testing #{constructor.call.class}")
+  tester.test_constructor(constructor)
+  tester.test_empty?(constructor)
+  tester.test_size(constructor)
+  tester.test_clear(constructor)
+  tester.test_elements(constructor)
+  tester.test_contains?(constructor)
+  tester.test_contains_predicate(constructor)
+  tester.test_contains_arithmetic(constructor)
+  tester.test_equals(constructor)
+  tester.test_equals_predicate(constructor)
+  tester.test_each(constructor)
+  tester.test_add(constructor)
+  tester.test_insert(constructor)
+  tester.test_insert_fill_zero(constructor)
+  tester.test_insert_negative_index(constructor)
+  tester.test_insert_end(constructor)
+  # tester.test_insert_offset(constructor)
+  tester.test_delete(constructor)
+  # tester.test_delete_negative_index(constructor)
+  # tester.test_delete_offset(constructor)
+  # tester.test_get(constructor)
+  # tester.test_get_negative_index(constructor)
+  # tester.test_set(constructor)
+  # tester.test_set_negative_index(constructor)
+  # tester.test_set_out_of_bounds(constructor)
+  # tester.test_index(constructor)
+  # tester.test_index_predicate(constructor)
+  # tester.test_index_arithmetic(constructor)
+  # tester.test_slice(constructor)
+  # tester.test_slice_negative_index(constructor)
+  # tester.test_slice_corner_cases(constructor)
+  # tester.test_reverse(constructor)
+  # tester.test_time(constructor)
+end
+
 class TestPersistentList < TestList
   def test_it
-    test_constructor(lambda {Containers::PersistentList.new})
-    test_empty?(lambda {Containers::PersistentList.new})
-    test_size(lambda {Containers::PersistentList.new})
-    test_clear(lambda {Containers::PersistentList.new})
-    test_contains?(lambda {Containers::PersistentList.new})
-    test_contains_predicate(lambda {Containers::PersistentList.new})
-    test_contains_arithmetic(lambda {Containers::PersistentList.new})
-    test_equals(lambda {Containers::PersistentList.new})
-    test_equals_predicate(lambda {Containers::PersistentList.new})
-    test_each(lambda {Containers::PersistentList.new})
-    test_add(lambda {Containers::PersistentList.new})
-    test_insert(lambda {|type, fill_elt| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
-    test_insert_fill_zero(lambda {|type, fill_elt| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
-    test_insert_negative_index(lambda {Containers::PersistentList.new})
-    test_insert_end(lambda {Containers::PersistentList.new})
-    # test_insert_offset(lambda {Containers::PersistentList.new})
-    # test_delete(lambda {Containers::PersistentList.new})
-    # test_delete_negative_index(lambda {Containers::PersistentList.new})
-    # test_delete_offset(lambda {Containers::PersistentList.new})
-    # test_get(lambda {Containers::PersistentList.new})
-    # test_get_negative_index(lambda {Containers::PersistentList.new})
-    # test_set(lambda {Containers::PersistentList.new})
-    # test_set_negative_index(lambda {Containers::PersistentList.new})
-    # test_set_out_of_bounds(lambda {Containers::PersistentList.new})
-    # test_index(lambda {Containers::PersistentList.new})
-    # test_index_predicate(lambda {Containers::PersistentList.new})
-    # test_index_arithmetic(lambda {Containers::PersistentList.new})
-    # test_slice(lambda {Containers::PersistentList.new})
-    # test_slice_negative_index(lambda {Containers::PersistentList.new})
-    # test_slice_corner_cases(lambda {Containers::PersistentList.new})
-    # test_reverse(lambda {Containers::PersistentList.new})
-    # test_time(lambda {puts("PersistentList"); Containers::PersistentList.new})
+    persistent_list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
+    # test_constructor(lambda {Containers::PersistentList.new})
+    # test_empty?(lambda {Containers::PersistentList.new})
+    # test_size(lambda {Containers::PersistentList.new})
+    # test_clear(lambda {Containers::PersistentList.new})
+    # test_contains?(lambda {Containers::PersistentList.new})
+    # test_contains_predicate(lambda {Containers::PersistentList.new})
+    # test_contains_arithmetic(lambda {Containers::PersistentList.new})
+    # test_equals(lambda {Containers::PersistentList.new})
+    # test_equals_predicate(lambda {Containers::PersistentList.new})
+    # test_each(lambda {Containers::PersistentList.new})
+    # test_add(lambda {Containers::PersistentList.new})
+    # test_insert(lambda {|type, fill_elt| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
+    # test_insert_fill_zero(lambda {|type, fill_elt| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
+    # test_insert_negative_index(lambda {Containers::PersistentList.new})
+    # test_insert_end(lambda {Containers::PersistentList.new})
+    # # test_insert_offset(lambda {Containers::PersistentList.new})
+    # # test_delete(lambda {Containers::PersistentList.new})
+    # # test_delete_negative_index(lambda {Containers::PersistentList.new})
+    # # test_delete_offset(lambda {Containers::PersistentList.new})
+    # # test_get(lambda {Containers::PersistentList.new})
+    # # test_get_negative_index(lambda {Containers::PersistentList.new})
+    # # test_set(lambda {Containers::PersistentList.new})
+    # # test_set_negative_index(lambda {Containers::PersistentList.new})
+    # # test_set_out_of_bounds(lambda {Containers::PersistentList.new})
+    # # test_index(lambda {Containers::PersistentList.new})
+    # # test_index_predicate(lambda {Containers::PersistentList.new})
+    # # test_index_arithmetic(lambda {Containers::PersistentList.new})
+    # # test_slice(lambda {Containers::PersistentList.new})
+    # # test_slice_negative_index(lambda {Containers::PersistentList.new})
+    # # test_slice_corner_cases(lambda {Containers::PersistentList.new})
+    # # test_reverse(lambda {Containers::PersistentList.new})
+    # # test_time(lambda {puts("PersistentList"); Containers::PersistentList.new})
   end
 end

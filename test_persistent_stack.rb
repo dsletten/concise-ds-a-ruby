@@ -71,6 +71,15 @@ class TestStack < Test::Unit::TestCase # Conflict with test_stack.rb???
     assert_stack_size(stack, 0)
   end
 
+  def test_elements(constructor)
+    count = 1000
+    stack = constructor.call.fill(count: count)
+    expected = (1..count).to_a.reverse
+    elts = stack.elements
+
+    assert(expected == elts, "LIFO elements should be #{expected[0, 10]} not #{elts[0, 10]}")
+  end
+    
   def test_push(constructor)
     count = 1000
     stack = constructor.call
@@ -92,7 +101,8 @@ class TestStack < Test::Unit::TestCase # Conflict with test_stack.rb???
     stack = constructor.call.fill(count: count)
 
     stack.size.downto(1) do |i|
-      assert_equal(i, stack.peek, "Wrong value popped: #{stack.peek} should be #{i}")
+      top = stack.peek
+      assert_equal(i, top, "Wrong value popped: #{top} should be #{i}")
       stack = stack.pop
     end
 
@@ -116,33 +126,28 @@ class TestStack < Test::Unit::TestCase # Conflict with test_stack.rb???
   end
 end
 
+def persistent_stack_test_suite(tester, constructor)
+  puts("Testing #{constructor.call.class}")
+  tester.test_constructor(constructor)
+  tester.test_empty?(constructor)
+  tester.test_size(constructor)
+  tester.test_clear(constructor)
+  tester.test_elements(constructor)
+  tester.test_push(constructor)
+  tester.test_push_wrong_type(constructor)
+  tester.test_peek_pop(constructor)
+  tester.test_time(constructor)
+end
+  
 class TestPersistentLinkedStack < TestStack
   def test_it
-    constructor = lambda {|type: Object| Containers::PersistentLinkedStack.new(type: type)}
-
-    test_constructor(constructor)
-    test_empty?(constructor)
-    test_size(constructor)
-    test_clear(constructor)
-    test_push(constructor)
-    test_push_wrong_type(constructor)
-    test_peek_pop(constructor)
-    test_time(constructor)
+    persistent_stack_test_suite(self, lambda {|type: Object| Containers::PersistentLinkedStack.new(type: type)})
   end
 end
 
 class TestPersistentListStack < TestStack
   def test_it
-    constructor = lambda {|type: Object| Containers::PersistentListStack.new(type: type)}
-
-    test_constructor(constructor)
-    test_empty?(constructor)
-    test_size(constructor)
-    test_clear(constructor)
-    test_push(constructor)
-    test_push_wrong_type(constructor)
-    test_peek_pop(constructor)
-    test_time(constructor)
+    persistent_stack_test_suite(self, lambda {|type: Object| Containers::PersistentListStack.new(type: type)})
   end
 end
 

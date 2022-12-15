@@ -37,15 +37,23 @@ class TestQueue < Test::Unit::TestCase
   def test_empty?(constructor)
     queue = constructor.call
     assert(queue.empty?, "New queue should be empty.")
-    assert(!queue.enqueue(:foo).empty?, "Queue with elt should not be empty.")
-    assert(queue.enqueue(:foo).dequeue.empty?, "Empty queue should be empty.")
+
+    queue = queue.enqueue(:foo)
+    assert(!queue.empty?, "Queue with elt should not be empty.")
+
+    queue = queue.dequeue
+    assert(queue.empty?, "Empty queue should be empty.")
   end
 
   def test_deque_empty?(constructor)
     deque = constructor.call
     assert(deque.empty?, "New deque should be empty.")
-    assert(!deque.enqueue_front(:foo).empty?, "Deque with elt should not be empty.")
-    assert(deque.enqueue_front(:foo).dequeue_rear.empty?, "Empty deque should be empty.")
+
+    deque = deque.enqueue_front(:foo)
+    assert(!deque.empty?, "Deque with elt should not be empty.")
+
+    deque = deque.dequeue_rear
+    assert(deque.empty?, "Empty deque should be empty.")
   end
 
   def test_size(constructor)
@@ -53,10 +61,18 @@ class TestQueue < Test::Unit::TestCase
     count = 1000
     queue = constructor.call
     assert(queue.size.zero?, "Size of new queue should be zero.")
+
     1.upto(count) do |i|
       queue = queue.enqueue(i)
       assert_queue_size(queue, i)
     end
+
+    (count-1).downto(0) do |i|
+      queue = queue.dequeue
+      assert_queue_size(queue, i)
+    end
+
+    assert(queue.empty?, "Empty queue should be empty.")
   end
 
   def assert_queue_size(queue, n)
@@ -68,64 +84,96 @@ class TestQueue < Test::Unit::TestCase
     count = 1000
     deque = constructor.call
     assert(deque.size.zero?, "Size of new deque should be zero.")
+
     1.upto(count) do |i|
       deque = deque.enqueue_front(i)
       assert_queue_size(deque, i)
     end
+
+    (count-1).downto(0) do |i|
+      deque = deque.dequeue_rear
+      assert_queue_size(deque, i)
+    end
+
+    assert(deque.empty?, "Empty deque should be empty.")
   end
 
   def test_clear(constructor)
     count = 1000
-    queue = fill(constructor.call, count)
+    queue = constructor.call.fill(count: count)
+
     assert(!queue.empty?, "Queue should have #{count} elements.")
-    assert(queue.clear.empty?, "Queue should be empty.")
-    assert_queue_size(queue.clear, 0)
+
+    queue = queue.clear
+    assert(queue.empty?, "Queue should be empty.")
+    assert_queue_size(queue, 0)
+
+    queue = queue.fill(count: count)
+    assert(!queue.empty?, "Emptying queue should not break it.")
   end
 
-  def fill(queue, count)
-    1.upto(count) do |i|
-      queue = queue.enqueue(i)
-    end
-
-    queue
-  end
-
-  #
-  #    This is identical to test_front in Ruby implementation. No multiple values to return dequeued value along with new queue...
-  #    
-  # def test_dequeue(constructor)
-  #   count = 1000
-  #   queue = fill(constructor.call, count)
-
-  #   limit = queue.size
-  #   1.upto(limit) do |i|
-  #     front = queue.front
-  #     assert_equal(i, front, "Value on front of queue should be #{i} not #{front}")
-  #     queue = queue.dequeue
-  #   end
-  #   assert(queue.empty?)
-  # end
-
-  def test_front(constructor)
+  def test_elements(constructor)
     count = 1000
-    queue = fill(constructor.call, count)
+    queue = constructor.call.fill(count: count)
+    expected = (1..count).to_a
+    elts = queue.elements
+
+    assert(expected == elts, "FIFO elements should be #{expected[0, 10]} not #{elts[0, 10]}")
+  end
+    
+  def test_enqueue(constructor)
+    count = 1000
+    queue = constructor.call
+
+    1.upto(count) do |i|
+      dequeued = queue.enqueue(i).front
+      assert_equal(i, dequeued, "Wrong value enqueueed: #{dequeued} should be: #{i}")
+    end
+  end
+
+  def test_enqueue_wrong_type(constructor)
+    queue = constructor.call(type: Integer)
+
+    assert_raises(ArgumentError, "Can't enqueue() value of wrong type onto queue.") { queue.enqueue(1.0) }
+  end
+
+  def test_enqueue_front(constructor)
+    count = 1000
+    deque = constructor.call
+
+    1.upto(count) do |i|
+      dequeued = deque.enqueue_front(i).rear
+      assert_equal(i, dequeued, "Wrong value enqueued at front: #{dequeued} should be: #{i}")
+    end
+  end
+
+  def test_enqueue_front_wrong_type(constructor)
+    deque = constructor.call(type: Integer)
+
+    assert_raises(ArgumentError, "Can't enqueue_front() value of wrong type onto deque.") { deque.enqueue_front(1.0) }
+  end
+
+  def test_front_dequeue(constructor)
+    count = 1000
+    queue = constructor.call.fill(count: count)
 
     1.upto(count) do |i|
       front = queue.front
-      assert_equal(i, front, "Value on front of queue should be #{i} not #{front}")
+      assert_equal(i, front, "Wrong value dequeued: #{front} should be: #{i}")
       queue = queue.dequeue
     end
+
     assert(queue.empty?)
   end
 
-  def test_rear(constructor)
+  def test_rear_dequeue_rear(constructor)
     count = 1000
-    deque = fill(constructor.call, count)
+    deque = constructor.call.fill(count: count)
 
     count.downto(1) do |i|
       rear = deque.rear
-      assert_equal(i, rear, "Value on rear of deque should be #{i} not #{rear}")
       deque = deque.dequeue_rear
+      assert_equal(rear, i, "Wrong value dequeued from rear: #{rear} should be: #{i}")
     end
     assert(deque.empty?)
   end
@@ -138,9 +186,10 @@ class TestQueue < Test::Unit::TestCase
     Benchmark.bm do |run|
       run.report("Timing #{queue.class}") do 
         10.times do
-          new_queue = fill(queue, count)
-          until new_queue.empty?
-            new_queue = new_queue.dequeue
+          queue = queue.fill(count: count)
+
+          until queue.empty?
+            queue = queue.dequeue
           end
         end
       end
@@ -155,12 +204,12 @@ class TestQueue < Test::Unit::TestCase
     Benchmark.bm do |run|
       run.report("Timing #{deque.class}") do 
         10.times do
-          new_deque = deque
           count.times do |j|
-            new_deque = new_deque.enqueue_front(j)
+            deque = deque.enqueue_front(j)
           end
-          until new_deque.empty?
-            new_deque = new_deque.dequeue_rear
+
+          until deque.empty?
+            deque = deque.dequeue_rear
           end
         end
       end
@@ -168,60 +217,51 @@ class TestQueue < Test::Unit::TestCase
   end
 end
 
-class TestPersistentQueue < TestQueue
+def persistent_queue_test_suite(tester, constructor)
+  puts("Testing #{constructor.call.class}")
+  tester.test_constructor(constructor)
+  tester.test_empty?(constructor)
+  tester.test_size(constructor)
+  tester.test_clear(constructor)
+  tester.test_elements(constructor)
+  tester.test_enqueue(constructor)
+  tester.test_enqueue_wrong_type(constructor)
+  tester.test_front_dequeue(constructor)
+  tester.test_time(constructor)
+end
+
+def persistent_deque_test_suite(tester, constructor)
+  persistent_queue_test_suite(tester, constructor)
+  
+  tester.test_deque_constructor(constructor)
+  tester.test_deque_empty?(constructor)
+  tester.test_deque_size(constructor)
+  tester.test_enqueue_front(constructor)
+  tester.test_enqueue_front_wrong_type(constructor)
+  tester.test_rear_dequeue_rear(constructor)
+  tester.test_deque_time(constructor)
+end
+
+class TestPersistentLinkedQueue < TestQueue
   def test_it
-    test_constructor(lambda {Containers::PersistentQueue.new})
-    test_empty?(lambda {Containers::PersistentQueue.new})
-    test_size(lambda {Containers::PersistentQueue.new})
-    test_clear(lambda {Containers::PersistentQueue.new})
-#    test_dequeue(lambda {Containers::PersistentQueue.new})
-    test_front(lambda {Containers::PersistentQueue.new})
-    test_time(lambda {Containers::PersistentQueue.new})
+    persistent_queue_test_suite(self, lambda {|type: Object| Containers::PersistentLinkedQueue.new(type: type)})
   end
 end
 
 class TestPersistentListQueue < TestQueue
   def test_it
-    test_constructor(lambda {Containers::PersistentListQueue.new})
-    test_empty?(lambda {Containers::PersistentListQueue.new})
-    test_size(lambda {Containers::PersistentListQueue.new})
-    test_clear(lambda {Containers::PersistentListQueue.new})
-#    test_dequeue(lambda {Containers::PersistentListQueue.new})
-    test_front(lambda {Containers::PersistentListQueue.new})
-    test_time(lambda {Containers::PersistentListQueue.new})
+    persistent_queue_test_suite(self, lambda {|type: Object| Containers::PersistentListQueue.new(type: type)})
   end
 end
 
-class TestPersistentDeque < TestQueue
+class TestPersistentLinkedDeque < TestQueue
   def test_it
-    test_constructor(lambda {Containers::PersistentDeque.new})
-    test_deque_constructor(lambda {Containers::PersistentDeque.new})
-    test_empty?(lambda {Containers::PersistentDeque.new})
-    test_deque_empty?(lambda {Containers::PersistentDeque.new})
-    test_size(lambda {Containers::PersistentDeque.new})
-    test_deque_size(lambda {Containers::PersistentDeque.new})
-    test_clear(lambda {Containers::PersistentDeque.new})
-#    test_dequeue(lambda {Containers::PersistentDeque.new})
-    test_front(lambda {Containers::PersistentDeque.new})
-    test_rear(lambda {Containers::PersistentDeque.new})
-    test_time(lambda {Containers::PersistentDeque.new})
-    test_deque_time(lambda {Containers::PersistentDeque.new})
+    persistent_deque_test_suite(self, lambda {|type: Object| Containers::PersistentLinkedDeque.new(type: type)})
   end
 end
 
 class TestPersistentListDeque < TestQueue
   def test_it
-    test_constructor(lambda {Containers::PersistentListDeque.new})
-    test_deque_constructor(lambda {Containers::PersistentListDeque.new})
-    test_empty?(lambda {Containers::PersistentListDeque.new})
-    test_deque_empty?(lambda {Containers::PersistentListDeque.new})
-    test_size(lambda {Containers::PersistentListDeque.new})
-    test_deque_size(lambda {Containers::PersistentListDeque.new})
-    test_clear(lambda {Containers::PersistentListDeque.new})
-#    test_dequeue(lambda {Containers::PersistentListDeque.new})
-    test_front(lambda {Containers::PersistentListDeque.new})
-    test_rear(lambda {Containers::PersistentListDeque.new})
-    test_time(lambda {Containers::PersistentListDeque.new})
-    test_deque_time(lambda {Containers::PersistentListDeque.new})
+    persistent_deque_test_suite(self, lambda {|type: Object| Containers::PersistentListDeque.new(type: type)})
   end
 end

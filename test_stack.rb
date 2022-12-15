@@ -69,6 +69,16 @@ class TestStack < Test::Unit::TestCase
     assert_stack_size(stack, 0)
   end
 
+  def test_elements(constructor)
+    count = 1000
+    stack = constructor.call.fill(count: count)
+    expected = (1..count).to_a.reverse
+    elts = stack.elements
+
+    assert(expected == elts, "LIFO elements should be #{expected[0, 10]} not #{elts[0, 10]}")
+    assert(stack.empty?, "Mutable stack should be empty after elements are extracted.")
+  end
+    
   def test_push(constructor)
     count = 1000
     stack = constructor.call
@@ -142,66 +152,40 @@ class TestStack < Test::Unit::TestCase
   end
 end
 
+def stack_test_suite(tester, constructor)
+  puts("Testing #{constructor.call.class}")
+  tester.test_constructor(constructor)
+  tester.test_empty?(constructor)
+  tester.test_size(constructor)
+  tester.test_clear(constructor)
+  tester.test_elements(constructor)
+  tester.test_push(constructor)
+  tester.test_push_wrong_type(constructor)
+  tester.test_peek_pop(constructor)
+  tester.test_time(constructor)
+  tester.test_wave(constructor)
+end
+  
 class TestArrayStack < TestStack
   def test_it
-    constructor = lambda {|type: Object| Containers::ArrayStack.new(type: type)}
-
-    test_constructor(constructor)
-    test_empty?(constructor)
-    test_size(constructor)
-    test_clear(constructor)
-    test_push(constructor)
-    test_push_wrong_type(constructor)
-    test_peek_pop(constructor)
-    test_time(constructor)
-    test_wave(constructor)
+    stack_test_suite(self, lambda {|type: Object| Containers::ArrayStack.new(type: type)})
   end
 end
 
 class TestLinkedStack < TestStack
   def test_it
-    constructor = lambda {|type: Object| Containers::LinkedStack.new(type: type)}
-
-    test_constructor(constructor)
-    test_empty?(constructor)
-    test_size(constructor)
-    test_clear(constructor)
-    test_push(constructor)
-    test_push_wrong_type(constructor)
-    test_peek_pop(constructor)
-    test_time(constructor)
-    test_wave(constructor)
+    stack_test_suite(self, lambda {|type: Object| Containers::LinkedStack.new(type: type)})
   end
 end
 
 class TestLinkedListStack < TestStack
   def test_it
-    constructor = lambda {|type: Object| Containers::LinkedListStack.new(type: type)}
-
-    test_constructor(constructor)
-    test_empty?(constructor)
-    test_size(constructor)
-    test_clear(constructor)
-    test_push(constructor)
-    test_push_wrong_type(constructor)
-    test_peek_pop(constructor)
-    test_time(constructor)
-    test_wave(constructor)
+    stack_test_suite(self, lambda {|type: Object| Containers::LinkedListStack.new(type: type)})
   end
 end
 
 class TestHashStack < TestStack
   def test_it
-    constructor = lambda {|type: Object| Containers::HashStack.new(type: type)}
-
-    test_constructor(constructor)
-    test_empty?(constructor)
-    test_size(constructor)
-    test_clear(constructor)
-    test_push(constructor)
-    test_push_wrong_type(constructor)
-    test_peek_pop(constructor)
-    test_time(constructor)
-    test_wave(constructor)
+    stack_test_suite(self, lambda {|type: Object| Containers::HashStack.new(type: type)})
   end
 end

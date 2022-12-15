@@ -191,6 +191,20 @@ module Containers
       add(*((1..count).map {|x| generator.call(x)}))
     end
 
+    def elements
+      elts = []
+      i = iterator
+
+      until i.done?
+        elts.push(i.current)
+        i.next
+      end
+
+      clear
+
+      elts
+    end
+
     private
     def do_add(objs)
       raise NoMethodError, "#{self.class} does not implement do_add()"
@@ -2193,6 +2207,18 @@ module Containers
 
     def clear
       PersistentList.new(type: @type, fill_elt: @fill_elt)
+    end
+
+    def elements
+      elts = []
+      i = iterator
+
+      until i.done?
+        elts.push(i.current)
+        i = i.next
+      end
+
+      elts
     end
 
     # def iterator
