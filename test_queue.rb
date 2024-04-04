@@ -222,29 +222,34 @@ class TestQueue < Test::Unit::TestCase
 
   def test_wave(constructor)
     queue = constructor.call
-    queue.fill(count:  5000)
-    assert_queue_size(queue, 5000)
 
-    3000.times { queue.dequeue }
-    assert_queue_size(queue, 2000)
-    
-    queue.fill(count:  5000)
-    assert_queue_size(queue, 7000)
+    Benchmark.bm do |run|
+      run.report("Test wave") do 
+        queue.fill(count:  5000)
+        assert_queue_size(queue, 5000)
 
-    3000.times { queue.dequeue }
-    assert_queue_size(queue, 4000)
+        3000.times { queue.dequeue }
+        assert_queue_size(queue, 2000)
+        
+        queue.fill(count:  5000)
+        assert_queue_size(queue, 7000)
 
-    queue.fill(count:  5000)
-    assert_queue_size(queue, 9000)
+        3000.times { queue.dequeue }
+        assert_queue_size(queue, 4000)
 
-    3000.times { queue.dequeue }
-    assert_queue_size(queue, 6000)
+        queue.fill(count:  5000)
+        assert_queue_size(queue, 9000)
 
-    queue.fill(count:  4000)
-    assert_queue_size(queue, 10000)
+        3000.times { queue.dequeue }
+        assert_queue_size(queue, 6000)
 
-    10000.times { queue.dequeue }
-    assert(queue.empty?, "Queue should be empty.")
+        queue.fill(count:  4000)
+        assert_queue_size(queue, 10000)
+
+        10000.times { queue.dequeue }
+        assert(queue.empty?, "Queue should be empty.")
+      end
+    end
   end
 end
 

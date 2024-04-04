@@ -2,6 +2,7 @@ Review
 
 1. What are the carrier set and some operations of the Character ADT?
 The carrier set is alphabet (ASCII/ISO Latin 1/Unicode...) used in considering the String ADT. A String is a sequence of characters. A Character is simply one element.
+[Carrier set is set of glyphs? The "data structure" that implements the concrete data type involves the mapping between these glyphs and, say, Unicode code points?]
 The method set consists of:
     Inherent
   - Conversions: upper case -> lower case, vice versa. Digit -> char
@@ -13,6 +14,11 @@ The method set consists of:
 It would be inefficient to allocate an array holding 1 bit per array element. Even a byte array would waste 7 bits/element.
 Instead the bit string could be stored in a fixed-width integer value, e.g., 8 contiguous bytes -> 64-bit strings. Leading bits may be insignificant (How to indicate?).
 Alternatively, the bit string could be a variable length sequence of 64-bit elements to allow arbitrary length.
+[Empty bit string represented by NIL?]
+[Bit string could be implemented as product of primes. Specifically, if the ith bit is 1, then the ith prime would be a factor:
+ 11010 = (11 * 1)(7 * 1)(5 * 0)(3 * 1)(2 * 0) = 231. Empty bit string = 1. 1111...111 (n bits) > n! Unreasonable for large bit strings!!]
+                        ^^^^^^^       ^^^^^^^  0 bits are implicit!! (11 * 1)(7 * 1)(5 * 0)(3 * 1)(2 * 0) = 0!!!!!
+
 3. How might the concatenation operation of the Bit String ADT be realized using the carrier set representation you devised for question two above?
 Concatenation would require shifting integers, which is straightforward. However, care must be taken to check for overflow. In the case of an
 arbitrary length bit string, additional storage would have to be ensured.
@@ -34,17 +40,25 @@ a) The Real numbers
 C = {single/double-precision floats} Only approximation of reals. No irrationals! Subset of rationals. Limited magnitude/precision
 M = {+, -, *, /, <, >, = (sort of), ...} (Math library?)
 
+[The above describes a concrete data type! The ADT is C = ℝ. M = {+, -, *, /, <, >, =, abs, ...}]
+
 b) The Rational numbers
 C = {Normalized rationals (-4/14 = -2/7)} Arbitrary-precision integer numerator/denominator
-M = {+, -, *, /, <, >, =, numerator, denominator, coerce}
+M = {+, -, *, /, <, >, =, abs, numerator, denominator, coerce}
+
+[C = ℚ!]
 
 c) The Complex numbers
 C = {a + bi}, a,b integer/rational/float
-M = {+, -, *, /, =, ...} No <, >
+M = {+, -, *, /, =, abs, ...} No <, >
+
+[C = ℂ!]
 
 d) Ordered pairs of Integers
 C = {(m, n)}
 M = {=, abs (magnitude -- hypot)}
+
+[C = ℤ X ℤ!]
 
 e) Sets of Characters
 C = {{}, {'a'}, {'b'}, {'a', 'b'}, ...}
@@ -58,7 +72,7 @@ M = {<, >, =, passing?, convert to GPA}
 some programming language, or describe how the values in the carrier set might
 be realized using the facilities of some programming language, and sketch how the
 operations in the method set might be implemented.
-a) IEEE 754 single/double-precision floats. Implemented in hardware.
+a) IEEE 754 single/double-precision floats. Implemented in hardware. Other floating-point functions implemented as library.
 b) Pairs of arbitrary-precision integers representing numerator/denominator. Operations implemented by language on top of hardware integer operations.
 c) Pairs of float/integer/rational numbers representing real/imaginary parts. Operation implemented by language on top of hardware numeric capabilities.
 d) Pairs of integers (?!). Equality: (a, b) = (c, d)  <=>  a = c  ^  b = d

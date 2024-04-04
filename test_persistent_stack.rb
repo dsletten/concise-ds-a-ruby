@@ -45,30 +45,29 @@ class TestStack < Test::Unit::TestCase # Conflict with test_stack.rb???
 
     1.upto(count) do |i|
       stack = stack.push(i)
-      assert_stack_size(stack, i)
+      assert_equal(i, stack.size, "Size of stack should be #{i} not #{stack.size}")
     end
 
     (count-1).downto(0) do |i|
       stack = stack.pop
-      assert_stack_size(stack, i)
+      assert_equal(i, stack.size, "Size of stack should be #{i} not #{stack.size}")
     end
 
     assert(stack.empty?, "Stack should be empty.")
   end
 
-  def assert_stack_size(stack, n)
-      assert_equal(n, stack.size, "Size of stack should be #{n}")
-  end    
-
   def test_clear(constructor)
     count = 1000
-    stack = constructor.call.fill(count: count)
+    original_stack = constructor.call.fill(count: count)
 
-    assert(!stack.empty?, "Stack should have #{count} elements.")
+    assert(!original_stack.empty?, "Stack should have #{count} elements.")
 
-    stack = stack.clear
+    stack = original_stack.clear
     assert(stack.empty?, "Stack should be empty.")
-    assert_stack_size(stack, 0)
+    assert(!original_stack.empty?, "Original stack is unaffected.")
+    assert(stack != original_stack, "Cleared stack is new stack.")
+    assert_equal(0, stack.size, "Size of empty stack should be 0.")
+    assert(stack == stack.clear, "Clearing empty stack has no effect.")
   end
 
   def test_elements(constructor)

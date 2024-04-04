@@ -126,29 +126,34 @@ class TestStack < Test::Unit::TestCase
 
   def test_wave(constructor)
     stack = constructor.call
-    stack.fill(count: 5000)
-    assert_stack_size(stack, 5000)
 
-    3000.times { stack.pop }
-    assert_stack_size(stack, 2000)
-    
-    stack.fill(count: 5000)
-    assert_stack_size(stack, 7000)
+    Benchmark.bm do |run|
+      run.report("Test wave") do 
+        stack.fill(count: 5000)
+        assert_stack_size(stack, 5000)
 
-    3000.times { stack.pop }
-    assert_stack_size(stack, 4000)
+        3000.times { stack.pop }
+        assert_stack_size(stack, 2000)
+        
+        stack.fill(count: 5000)
+        assert_stack_size(stack, 7000)
 
-    stack.fill(count: 5000)
-    assert_stack_size(stack, 9000)
+        3000.times { stack.pop }
+        assert_stack_size(stack, 4000)
 
-    3000.times { stack.pop }
-    assert_stack_size(stack, 6000)
+        stack.fill(count: 5000)
+        assert_stack_size(stack, 9000)
 
-    stack.fill(count: 4000)
-    assert_stack_size(stack, 10000)
+        3000.times { stack.pop }
+        assert_stack_size(stack, 6000)
 
-    10000.times { stack.pop }
-    assert(stack.empty?, "Stack should be empty.")
+        stack.fill(count: 4000)
+        assert_stack_size(stack, 10000)
+
+        10000.times { stack.pop }
+        assert(stack.empty?, "Stack should be empty.")
+      end
+    end
   end
 end
 

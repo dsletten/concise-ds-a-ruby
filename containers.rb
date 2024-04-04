@@ -28,11 +28,18 @@ module Containers
     end
 
     def clear
-      raise NoMethodError, "#{self.class} does not implement clear()"
+      unless empty?
+        do_clear
+      end
     end
 
     def elements
       raise NoMethodError, "#{self.class} does not implement elements()"
+    end
+
+    private
+    def do_clear
+      raise NoMethodError, "#{self.class} does not implement do_clear()"
     end
   end
 

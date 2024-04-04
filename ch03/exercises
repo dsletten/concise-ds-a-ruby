@@ -1,7 +1,7 @@
 Review
 
 1. Are sets structured? Do sets have access restrictions? Do sets have keyed access?
-Sets are not structured. The mathematical idea of a set does not inherently impose any sort of order or arrangement (although the elements themselves may be capable of being ordered):
+Sets are not structured. The mathematical idea of a set does not inherently impose any sort of order or arrangement (e.g., hierarchy of nodes) (although the elements themselves may be capable of being ordered):
 {1, 2, 3} = {2, 1, 3} (Definition of set equality A ⊂ B and B ⊂ A)
 There are no access restrictions on sets. The primary operation of checking membership applies to any element.
 Sets do not have keyed access.
@@ -10,7 +10,8 @@ Sets do not have keyed access.
 clear() causes the container to be empty, so that empty?() must return true.
 An empty container holds 0 elements so size() must return 0.
 
-3. What would happen if you forgot to write a method in the Container interface in some class in the container hierarchy that you implemented in Ruby? What would happen if you tried to call that method from an instance of the class?
+3. What would happen if you forgot to write a method in the Container interface in some class in the container hierarchy that you implemented in Ruby?
+   What would happen if you tried to call that method from an instance of the class?
 No compile-time check would detect that a class failed to implement a required method.
 At runtime method_missing() would be called. By default, this would raise an exception.
 
@@ -27,7 +28,7 @@ Yes. The timestamp.
 d) In the container hierarchy, would a Log be a Collection or a Dispenser?
 The Log is potentially traversable if there is a meaningful way of iterating over timestamps. [But this is not really a fundamental property of the container. It seems more appropriate to consider it
 a Dispenser.]
-The Log should have an iterator that allows traversal.
+The Log should have an iterator that allows traversal. => Collection!
 
 2. Consider a kind of Container called a Shoe used in an automated Baccarat program. When a Shoe instance is created, it contains eight decks of Cards in random order. Cards can be removed one at a time from 
 the front of a Shoe. Cards cannot be placed in a Shoe, modified, or removed from any other spot. No Cards in a Shoe can be examined.

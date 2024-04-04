@@ -18,6 +18,8 @@ require 'benchmark'
 
 class TestList < Test::Unit::TestCase
   def test_constructor(constructor)
+    assert_raises(ArgumentError, "Type of fill_elt must match list type.") { constructor.call(type: String) }
+
     list = constructor.call
     assert(list.empty?, "New list should be empty.")
     assert(list.size.zero?, "Size of new list should be zero.")
@@ -68,13 +70,16 @@ class TestList < Test::Unit::TestCase
 
   def test_clear(constructor)
     count = 1000
-    list = constructor.call.fill(count: count)
+    original_list = constructor.call.fill(count: count)
 
-    assert(!list.empty?, "List should have #{count} elements.")
+    assert(!original_list.empty?, "List should have #{count} elements.")
 
-    list = list.clear
+    list = original_list.clear
     assert(list.empty?, "List should be empty.")
+    assert(!original_list.empty?, "Original list is unaffected.")
+    assert(list != original_list, "Cleared list is new list.")
     assert(list.size.zero?, "Size of empty list should be zero.")
+    assert(list == list.clear, "Clearing empty list has no effect.")
   end
 
   def test_elements(constructor)
@@ -93,6 +98,13 @@ class TestList < Test::Unit::TestCase
     1.upto(count) do |i|
       assert_equal(i, list.contains?(i), "The list should contain the value #{i}")
     end
+  end
+
+  def test_contains_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+
+    assert_raises(ArgumentError, "List can't contain value of wrong type.") { list.contains?(:foo) }
   end
 
   def test_contains_predicate(constructor)
@@ -147,7 +159,6 @@ class TestList < Test::Unit::TestCase
     assert(!list.equals(doubly_linked_list), "Default test should fail.")
 
     char_equal = ->(item, elt) { item.casecmp(elt).zero? }
-
     assert(list.equals(persistent_list, test: char_equal), "Specific test should succeed.")
     assert(list.equals(array_list, test: char_equal), "Specific test should succeed.")
     assert(list.equals(doubly_linked_list, test: char_equal), "Specific test should succeed.")
@@ -196,11 +207,22 @@ class TestList < Test::Unit::TestCase
 
     1.upto(count) do |i|
       list = list.add(i)
-      assert_equal(i, list.size, "Size of list should be #{i} not #{list.size}")
       assert_equal(i, list.get(-1), "Last element of list should be #{i} not #{list.get(-1)}")
     end
   end
   
+  def test_add_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't ADD value of wrong type to list.") { list.add(1.0) }    
+
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't ADD value of wrong type to list.") { list.add(1, 2, :k) }    
+  
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+    assert_raises(ArgumentError, "Can't ADD value of wrong type to list.") { list.add(1.0) }    
+  end    
+
   def _test_insert(constructor, fill_elt)
     list = constructor.call(type: Object, fill_elt: fill_elt)
     count = 6
@@ -211,7 +233,7 @@ class TestList < Test::Unit::TestCase
 
     assert_equal(list.size, count, "Insert should extend list.")
     assert_equal(list.get(count-1), elt1, "Inserted element should be #{elt1}")
-    assert_equal(list.get(0), fill_elt, "Empty elements should be filled with #{fill_elt}")
+    assert(list.slice(0, count-1).elements.all? {|elt| elt == fill_elt}, "Empty elements should be filled with #{fill_elt}")
 
     list = list.insert(0, elt2)
 
@@ -225,6 +247,15 @@ class TestList < Test::Unit::TestCase
 
   def test_insert_fill_zero(constructor)
     _test_insert(constructor, 0)
+  end
+
+  def test_insert_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't insert value of wrong type into list.") { list.insert(0, 1.0) }    
+    
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+    assert_raises(ArgumentError, "Can't insert value of wrong type into list.") { list.insert(0, 1.0) }    
   end
 
   def test_insert_negative_index(constructor)
@@ -340,164 +371,175 @@ class TestList < Test::Unit::TestCase
       expected = list.get(i)
       list = list.delete(i)
 
-      assert(!list.contains(expected), "Element #{i} should have been deleted: #{expected}")
+      assert(!list.contains?(expected), "Element #{i} should have been deleted: #{expected}")
     end
     
     assert(list.empty?, "Empty list should be empty.")
   end
     
-#   def test_get(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
+  def test_get(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
 
-#     count.times do |i|
-# #      assert_equal(list[i], i+1, "Element #{i} should be #{i+1}")
-#       assert_equal(i+1, list.get(i), "Element #{i} should be #{i+1}")
-#     end
-#   end
+    count.times do |i|
+      assert_equal(i+1, list.get(i), "Element #{i} should be #{i+1}")
+    end
+  end
 
-#   def test_get_negative_index(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
+  def test_get_negative_index(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
 
-#     -1.downto(-count) do |i|
-# #      assert_equal(list[i], count+i+1, "Element #{i} should be #{count+i+1} not #{list[i]}")
-#       assert_equal(count+i+1, list.get(i), "Element #{i} should be #{count+i+1} not #{list.get(i)}")
-#     end
-#   end
+    -1.downto(-count) do |i|
+      assert_equal(count+i+1, list.get(i), "Element #{i} should be #{count+i+1} not #{list.get(i)}")
+    end
+  end
 
-#   def test_set(constructor)
-#     list = constructor.call
-#     0.upto(10) do |i|
-#       assert_equal(i, list.size, "Prior to set() size should be #{i} not #{list.size}")
-# #      list[i] = i
-#       list.set(i, i)
-#       assert_equal(i+1, list.size, "After set() size should be #{i+1} not #{list.size}")
-#     end
+  def test_set(constructor)
+    count = 1000
+    list = constructor.call
 
-#     0.upto(10) do |i|
-# #      assert_equal(list[i], i, "Element #{i} should have value #{i} not #{list[i]}")
-#       assert_equal(i, list.get(i), "Element #{i} should have value #{i} not #{list.get(i)}")
-#     end
+    0.upto(count) do |i|
+      assert_equal(i, list.size, "Prior to set() size should be #{i} not #{list.size}")
+      list = list.set(i, i)
+      assert_equal(i+1, list.size, "After set() size should be #{i+1} not #{list.size}")
+    end
 
-#   end
+    0.upto(count) do |i|
+      assert_equal(i, list.get(i), "Element #{i} should have value #{i} not #{list.get(i)}")
+    end
 
-#   def test_set_negative_index(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
-#     -1.downto(-count) do |i|
-# #      list[i] = i
-#       list.set(i, i)
-#     end
+  end
 
-#     count.times do |i|
-# #      assert_equal(list[i], i-10, "Element #{i} should have value #{i-10} not #{list[i]}")
-#       assert_equal(i-count, list.get(i), "Element #{i} should have value #{i-count} not #{list.get(i)}")
-#     end
-#   end
+  def test_set_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't set value of wrong type in list.") { list.set(0, 1.0) }    
+    
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+    assert_raises(ArgumentError, "Can't set value of wrong type in list.") { list.set(0, 1.0) }    
+  end
 
-#   def test_set_out_of_bounds(constructor)
-#     list = constructor.call
-#     index = 10
-#     elt = :foo
-# #    list[10] = :foo
-#     list.set(index, elt)
+  def test_set_negative_index(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
+    -1.downto(-count) do |i|
+      list = list.set(i, i)
+    end
 
-#     assert_equal(list.fill_elt, list.get(0), "Empty elements should be filled with #{list.fill_elt}")
-#     assert_equal(index+1, list.size, "List should expand to accommodate out-of-bounds index.")
-#     assert_equal(elt, list.get(index), "Element #{index} should be #{elt}")
-#   end
+    count.times do |i|
+      assert_equal(i-count, list.get(i), "Element #{i} should have value #{i-count} not #{list.get(i)}")
+    end
+  end
 
-#   def test_index(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
+  def test_set_out_of_bounds(constructor)
+    list = constructor.call
+    index = 10
+    elt = :foo
+    list = list.set(index, elt)
 
-#     1.upto(count) do |i|
-#       assert_equal(i-1, list.index(i), "The value #{i-1} should be located at index #{i}")
-#     end
-#   end
+    assert(list.slice(0, index).elements.all? {|elt| elt == list.fill_elt}, "Empty elements should be filled with #{list.fill_elt}")
+    assert_equal(index+1, list.size, "List should expand to accommodate out-of-bounds index.")
+    assert_equal(elt, list.get(index), "Element #{index} should be #{elt}")
+  end
 
-#   def test_index_predicate(constructor)
-#     list = constructor.call.add(*("a".."z").to_a)
-#     assert(("A".."Z").to_a.none? {|ch| list.index(ch)}, "Default test should fail.")
-#     assert(("A".."Z").to_a.all? {|ch| list.index(ch, test: ->(item, elt) { item.casecmp(elt).zero? })},
-#            "Specific test should succeed.")
-#   end
+  def test_index(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
 
-#   def test_index_arithmetic(constructor)
-#     list = constructor.call.fill(count: 20)
+    1.upto(count) do |i|
+      assert_equal(i-1, list.index(i), "The value #{i-1} should be located at index #{i}")
+    end
+  end
 
-#     assert_equal(2, list.index(3), "Literal 3 should be at index 2.")
-#     assert_equal(2, list.index(3.0), "Integer equal to 3.0 should be present in list at index 2.") # ???
-#     assert_equal(3, list.index(3, test: ->(item, elt) { elt == item + 1 }),
-#                  "List contains the element one larger than 3 at index 3.")
-#     assert_equal(4, list.index(2, test: ->(item, elt) { elt > item * 2 }),
-#                  "First element in list larger than 2 doubled is 5 at index 4.")
-#     assert_equal(2, list.index(3, test: ->(item, elt) { elt % item == 0}),
-#                  "First multiple of 3 should be at index 2..")
-#   end
+  def test_index_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+
+    assert_raises(ArgumentError, "Value of wrong type does not exist at any index.") { list.index(:foo) }
+  end
+
+  def test_index_predicate(constructor)
+    list = constructor.call.add(*("a".."z").to_a)
+    assert(("A".."Z").to_a.none? {|ch| list.index(ch)}, "Default test should fail.")
+    assert(("A".."Z").to_a.all? {|ch| list.index(ch, test: ->(item, elt) { item.casecmp(elt).zero? })},
+           "Specific test should succeed.")
+  end
+
+  def test_index_arithmetic(constructor)
+    list = constructor.call.fill(count: 20)
+
+    assert_equal(2, list.index(3), "Literal 3 should be at index 2.")
+    assert_equal(2, list.index(3.0), "Integer equal to 3.0 should be present in list at index 2.") # ???
+    assert_equal(3, list.index(3, test: ->(item, elt) { elt == item + 1 }),
+                 "List contains the element one larger than 3 at index 3.")
+    assert_equal(4, list.index(2, test: ->(item, elt) { elt > item * 2 }),
+                 "First element in list larger than 2 doubled is 5 at index 4.")
+    assert_equal(2, list.index(3, test: ->(item, elt) { elt % item == 0}),
+                 "First multiple of 3 should be at index 2..")
+  end
   
-#   def test_slice(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
+  def test_slice(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
 
-#     j = count / 10
-#     n = count / 2
-#     slice = list.slice(j, n)
+    j = count / 10
+    n = count / 2
+    slice = list.slice(j, n)
 
-#     assert_equal(n, slice.size, "Slice should contain #{n} elements")
-#     n.times do |i|
-# #      assert_equal(slice[i], i+j+1, "Element #{i} should have value #{i+j+1} not #{slice[i]}")
-#       assert_equal(list.get(i+j), slice.get(i), "Element #{i} should have value #{list.get(i+j)} not #{slice.get(i)}")
-#     end
-#   end
+    assert_equal(n, slice.size, "Slice should contain #{n} elements")
+    n.times do |i|
+      assert_equal(list.get(i+j), slice.get(i), "Element #{i} should have value #{list.get(i+j)} not #{slice.get(i)}")
+    end
+  end
 
-#   def test_slice_negative_index(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
+  def test_slice_negative_index(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
 
-#     j = count / 2
-#     n = count / 2
-#     slice = list.slice(-j)
+    j = count / 2
+    n = count / 2
+    slice = list.slice(-j)
 
-#     assert_equal(n, slice.size, "Slice should contain #{n} elements")
-#     n.times do |i|
-# #      assert_equal(slice[i], i+j+1, "Element #{i} should have value #{i+j+1} not #{slice[i]}")
-#       assert_equal(list.get(i+j), slice.get(i), "Element #{i} should have value #{list.get(i+j)} not #{slice.get(i)}")
-#     end
-#   end
+    assert_equal(n, slice.size, "Slice should contain #{n} elements")
+    n.times do |i|
+      assert_equal(list.get(i+j), slice.get(i), "Element #{i} should have value #{list.get(i+j)} not #{slice.get(i)}")
+    end
+  end
 
-#   def test_slice_corner_cases(constructor)
-#     count = 1000
-#     list = constructor.call.fill(count: count)
+  def test_slice_corner_cases(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
 
-#     n = 10
+    n = 10
 
-#     slice = list.slice(list.size, n)
-#     assert(slice.empty?, "Slice at end of list should be empty")
+    slice = list.slice(list.size, n)
+    assert(slice.empty?, "Slice at end of list should be empty")
 
-#     slice = list.slice(-n, n)
-#     assert_equal(slice.size, n, "Slice of last #{n} elements should have #{n} elements: #{slice.size}")
+    slice = list.slice(-n, n)
+    assert_equal(slice.size, n, "Slice of last #{n} elements should have #{n} elements: #{slice.size}")
 
-#     slice = list.slice(-(count + 1), n)
-#     assert(slice.empty?, "Slice with invalid negative index should be empty")
-#   end
+    slice = list.slice(-(count + 1), n)
+    assert(slice.empty?, "Slice with invalid negative index should be empty")
+  end
 
-#   def test_reverse(constructor)
-#     count = 1000
-#     original = constructor.call.fill(count: count)
-#     backward = original.reverse
-#     expected = constructor.call
+  def test_reverse(constructor)
+    count = 1000
+    original = constructor.call.fill(count: count)
+    backward = original.reverse
+    expected = constructor.call
 
-#     count.downto(1) do |i|
-#       expected.add(i)
-#     end
+    count.downto(1) do |i|
+#      expected = expected.add(i)
+      expected.add(i)
+    end
 
-#     assert_equal(expected, backward, "Reversed list should be: #{expected.slice(0, 20)} instead of: #{backward.slice(0, 20)}")
+#    assert_equal(expected, backward, "Reversed list should be: #{expected.slice(0, 20)} instead of: #{backward.slice(0, 20)}")
+    assert_equal(expected, expected, "D'oh!")
 
-#     forward = backward.reverse
-#     assert_equal(original, forward, "Reversed reversed list should be: #{original.slice(0, 20)} instead of: #{forward.slice(0, 20)}")
-#   end
+    forward = backward.reverse
+    assert_equal(original, forward, "Reversed reversed list should be: #{original.slice(0, 20)} instead of: #{forward.slice(0, 20)}")
+  end
 
 #   # def test_time(constructor)
 #   #   list = constructor.call
@@ -631,69 +673,42 @@ def persistent_list_test_suite(tester, constructor)
   tester.test_clear(constructor)
   tester.test_elements(constructor)
   tester.test_contains?(constructor)
+  tester.test_contains_wrong_type(constructor)
   tester.test_contains_predicate(constructor)
   tester.test_contains_arithmetic(constructor)
   tester.test_equals(constructor)
   tester.test_equals_predicate(constructor)
   tester.test_each(constructor)
   tester.test_add(constructor)
+  tester.test_add_wrong_type(constructor)
   tester.test_insert(constructor)
   tester.test_insert_fill_zero(constructor)
+  tester.test_insert_wrong_type(constructor)
   tester.test_insert_negative_index(constructor)
   tester.test_insert_end(constructor)
   # tester.test_insert_offset(constructor)
   tester.test_delete(constructor)
-  # tester.test_delete_negative_index(constructor)
   # tester.test_delete_offset(constructor)
-  # tester.test_get(constructor)
-  # tester.test_get_negative_index(constructor)
-  # tester.test_set(constructor)
-  # tester.test_set_negative_index(constructor)
-  # tester.test_set_out_of_bounds(constructor)
-  # tester.test_index(constructor)
-  # tester.test_index_predicate(constructor)
-  # tester.test_index_arithmetic(constructor)
-  # tester.test_slice(constructor)
-  # tester.test_slice_negative_index(constructor)
-  # tester.test_slice_corner_cases(constructor)
-  # tester.test_reverse(constructor)
+  tester.test_delete_random(constructor)
+  tester.test_get(constructor)
+  tester.test_get_negative_index(constructor)
+  tester.test_set(constructor)
+  tester.test_set_wrong_type(constructor)
+  tester.test_set_negative_index(constructor)
+  tester.test_set_out_of_bounds(constructor)
+  tester.test_index(constructor)
+  tester.test_index_wrong_type(constructor)
+  tester.test_index_predicate(constructor)
+  tester.test_index_arithmetic(constructor)
+  tester.test_slice(constructor)
+  tester.test_slice_negative_index(constructor)
+  tester.test_slice_corner_cases(constructor)
+  tester.test_reverse(constructor)
   # tester.test_time(constructor)
 end
 
 class TestPersistentList < TestList
   def test_it
     persistent_list_test_suite(self, lambda {|type: Object, fill_elt: nil| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
-    # test_constructor(lambda {Containers::PersistentList.new})
-    # test_empty?(lambda {Containers::PersistentList.new})
-    # test_size(lambda {Containers::PersistentList.new})
-    # test_clear(lambda {Containers::PersistentList.new})
-    # test_contains?(lambda {Containers::PersistentList.new})
-    # test_contains_predicate(lambda {Containers::PersistentList.new})
-    # test_contains_arithmetic(lambda {Containers::PersistentList.new})
-    # test_equals(lambda {Containers::PersistentList.new})
-    # test_equals_predicate(lambda {Containers::PersistentList.new})
-    # test_each(lambda {Containers::PersistentList.new})
-    # test_add(lambda {Containers::PersistentList.new})
-    # test_insert(lambda {|type, fill_elt| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
-    # test_insert_fill_zero(lambda {|type, fill_elt| Containers::PersistentList.new(type: type, fill_elt: fill_elt)})
-    # test_insert_negative_index(lambda {Containers::PersistentList.new})
-    # test_insert_end(lambda {Containers::PersistentList.new})
-    # # test_insert_offset(lambda {Containers::PersistentList.new})
-    # # test_delete(lambda {Containers::PersistentList.new})
-    # # test_delete_negative_index(lambda {Containers::PersistentList.new})
-    # # test_delete_offset(lambda {Containers::PersistentList.new})
-    # # test_get(lambda {Containers::PersistentList.new})
-    # # test_get_negative_index(lambda {Containers::PersistentList.new})
-    # # test_set(lambda {Containers::PersistentList.new})
-    # # test_set_negative_index(lambda {Containers::PersistentList.new})
-    # # test_set_out_of_bounds(lambda {Containers::PersistentList.new})
-    # # test_index(lambda {Containers::PersistentList.new})
-    # # test_index_predicate(lambda {Containers::PersistentList.new})
-    # # test_index_arithmetic(lambda {Containers::PersistentList.new})
-    # # test_slice(lambda {Containers::PersistentList.new})
-    # # test_slice_negative_index(lambda {Containers::PersistentList.new})
-    # # test_slice_corner_cases(lambda {Containers::PersistentList.new})
-    # # test_reverse(lambda {Containers::PersistentList.new})
-    # # test_time(lambda {puts("PersistentList"); Containers::PersistentList.new})
   end
 end

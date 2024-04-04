@@ -64,20 +64,16 @@ class TestQueue < Test::Unit::TestCase
 
     1.upto(count) do |i|
       queue = queue.enqueue(i)
-      assert_queue_size(queue, i)
+      assert_equal(i, queue.size, "Size of queue should be #{i} not #{queue.size}")
     end
 
     (count-1).downto(0) do |i|
       queue = queue.dequeue
-      assert_queue_size(queue, i)
+      assert_equal(i, queue.size, "Size of queue should be #{i} not #{queue.size}")
     end
 
     assert(queue.empty?, "Empty queue should be empty.")
   end
-
-  def assert_queue_size(queue, n)
-      assert_equal(n, queue.size, "Size of queue should be #{n}")
-  end    
 
   def test_deque_size(constructor)
     #  def test_deque_size(constructor, count=1000)
@@ -87,12 +83,12 @@ class TestQueue < Test::Unit::TestCase
 
     1.upto(count) do |i|
       deque = deque.enqueue_front(i)
-      assert_queue_size(deque, i)
+      assert_equal(i, deque.size, "Size of deque should be #{i} not #{deque.size}")
     end
 
     (count-1).downto(0) do |i|
       deque = deque.dequeue_rear
-      assert_queue_size(deque, i)
+      assert_equal(i, deque.size, "Size of deque should be #{i} not #{deque.size}")
     end
 
     assert(deque.empty?, "Empty deque should be empty.")
@@ -100,13 +96,16 @@ class TestQueue < Test::Unit::TestCase
 
   def test_clear(constructor)
     count = 1000
-    queue = constructor.call.fill(count: count)
+    original_queue = constructor.call.fill(count: count)
 
-    assert(!queue.empty?, "Queue should have #{count} elements.")
+    assert(!original_queue.empty?, "Queue should have #{count} elements.")
 
-    queue = queue.clear
+    queue = original_queue.clear
     assert(queue.empty?, "Queue should be empty.")
-    assert_queue_size(queue, 0)
+    assert(!original_queue.empty?, "Original queue is unaffected.")
+    assert(queue != original_queue, "Cleared queue is new queue.")
+    assert_equal(0, queue.size, "Size of empty queue should be 0.")
+    assert(queue == queue.clear, "Clearing empty queue has no effect.")
 
     queue = queue.fill(count: count)
     assert(!queue.empty?, "Emptying queue should not break it.")

@@ -74,11 +74,11 @@ module Containers
       @store.empty?
     end
 
-    def clear
+    private
+    def do_clear
       @store = []
     end
 
-    private
     def do_push(obj)
       @store.push(obj)
     end
@@ -107,12 +107,12 @@ module Containers
       @top.nil?
     end
 
-    def clear   # Call initialize??
+    private
+    def do_clear   # Call initialize??
       @top = nil
       @count = 0
     end
     
-    private
     def do_push(obj)
       @top = Node.new(obj, @top)
       @count += 1
@@ -145,11 +145,11 @@ module Containers
       @list.empty?
     end
 
-    def clear
+    private
+    def do_clear
       @list.clear
     end
     
-    private
     def do_push(obj)
       @list.insert(0, obj)
     end
@@ -182,6 +182,10 @@ module Containers
     end
 
     private
+    def do_clear
+      @store = {}
+    end
+
     def do_push(obj)
       @store[@store.size+1] = obj
     end
@@ -197,7 +201,11 @@ module Containers
 
   class PersistentStack < Stack
     def clear
-      make_empty_persistent_stack
+      if empty?
+        self
+      else
+        make_empty_persistent_stack
+      end
     end
     
     def fill(count: 1000, generator: ->(x) { x })
@@ -248,7 +256,7 @@ module Containers
 
     private
     def create_stack(top, count)
-      stack = PersistentLinkedStack.new(type: @type)
+      stack = make_empty_persistent_stack
       stack.top = top
       stack.count = count
       stack
@@ -294,7 +302,7 @@ module Containers
     
     private
     def create_stack(list)
-      stack = PersistentListStack.new(type: @type)
+      stack = make_empty_persistent_stack
       stack.list = list
 
       stack

@@ -91,9 +91,13 @@ module Containers
 
     ##########################################Structural modification############################
     def add(*objs)
-      raise ArgumentError.new("Type mismatch with objs") unless objs.all? {|obj| obj.is_a?(type)}
-
-      do_add(objs)
+      if objs.empty?
+        self
+      elsif objs.all? {|obj| obj.is_a?(type)}
+        do_add(objs)
+      else
+        raise ArgumentError.new("Type mismatch with objs")
+      end
     end
 
     def insert(i, obj)
@@ -187,22 +191,33 @@ module Containers
       make_empty_list.add(*reversed)
     end
     
+    def append(list)
+      make_empty_list.add(*(collect_elements + list.collect_elements))
+    end
+    
     def fill(count: 1000, generator: ->(x) { x })
       add(*((1..count).map {|x| generator.call(x)}))
     end
 
     def elements
-      elts = []
-      i = iterator
+      collect_elements
+    end
 
-      until i.done?
-        elts.push(i.current)
-        i.next
-      end
+    protected
+    def collect_elements
+      elements = []
+      each {|elt| elements.push(elt)}
+      
+      elements
+      # elts = []
+      # i = iterator
 
-      clear
+      # until i.done?
+      #   elts.push(i.current)
+      #   i.next
+      # end
 
-      elts
+      # elts
     end
 
     private
@@ -252,27 +267,50 @@ module Containers
       list
     end
 
-    def sublist(m, n)
-      result = []
-      m.upto(n-1) do |i|
-        result << get(i)
-      end
+    # def sublist(m, n)
+    #   result = []
+    #   m.upto(n-1) do |i|
+    #     result << get(i)
+    #   end
 
-      result
+    #   result
+    # end
+    
+    def sublist(m, n)
+      if m == n
+        []
+      else
+        list_iterator = list_iterator(m)
+        result = []
+
+        (n-m).times do
+          result << list_iterator.current
+          list_iterator.next
+        end
+
+        result
+      end
     end
   end
 
   class MutableList < List
-#    attr_reader :modification_count
+    attr_reader :modification_count # Must be visible for testing??
 
     def initialize(type: Object, fill_elt: nil)
       super(type: type, fill_elt: fill_elt)
       @modification_count = 0
     end
 
-    def clear
-      do_clear
+    def do_clear
+      do_do_clear
       count_modification
+    end
+
+    def elements
+      elts = collect_elements
+      clear
+
+      elts
     end
 
     private
@@ -280,15 +318,13 @@ module Containers
       @modification_count += 1
     end
 
-    def do_clear
+    def do_do_clear
       raise NoMethodError, "#{self.class} does not implement do_clear()"
     end
 
     def do_add(objs)
-      unless objs.empty?
-        do_do_add(objs)
-        count_modification
-      end
+      do_do_add(objs)
+      count_modification
 
       self
     end
@@ -327,6 +363,8 @@ module Containers
     def insert_before(node, obj)
       if !obj.is_a?(type)
         raise ArgumentError.new("#{obj} is not of type #{type}")
+      elsif empty?
+        raise ArgumentError.new("List is empty")
       elsif node.nil?
         raise ArgumentError.new("Invalid node")
       else
@@ -424,7 +462,7 @@ module Containers
     end
 
     private
-    def do_clear
+    def do_do_clear
       @store = []
     end
 
@@ -519,7 +557,7 @@ module Containers
   #   end
     
   #   private
-  #   def do_clear
+  #   def do_do_clear
   #     @store = []
   #     @offset = 0
   #   end
@@ -588,7 +626,7 @@ module Containers
   # end
 
   class SinglyLinkedList < MutableLinkedList
-#    attr_reader :store
+    attr_reader :store # Must be visible for testing??
 
     def initialize(type: Object, fill_elt: nil)
       super(type: type, fill_elt: fill_elt)
@@ -625,7 +663,7 @@ module Containers
     end
 
     private
-    def do_clear
+    def do_do_clear
       @store = nil
       @count = 0
     end
@@ -731,6 +769,8 @@ module Containers
   end    
 
   class SinglyLinkedListX < MutableLinkedList
+    attr_reader :front # Must be visible for testing??
+
     def initialize(type: Object, fill_elt: nil)
       super(type: type, fill_elt: fill_elt)
       @front = nil
@@ -767,7 +807,7 @@ module Containers
     end
 
     private
-    def do_clear
+    def do_do_clear
       @front = nil
       @rear = nil
       @count = 0
@@ -1244,6 +1284,8 @@ module Containers
   end
   
   class DoublyLinkedList < DcursorList
+    attr_reader :store # Must be visible for testing??
+
     def initialize(type: Object, fill_elt: nil)
       super(type: type, fill_elt: fill_elt)
       @store = nil
@@ -1285,7 +1327,7 @@ module Containers
     #   @cursor.reset
     # end
 
-    def do_clear
+    def do_do_clear
       unless empty?
         dcons = @store
         @count.times do
@@ -1452,19 +1494,19 @@ module Containers
     #    Inclusive `i`, exclusive `j`
     #    
 #    def subseq(i, j)
-    def sublist(i, j)
-      result = []
+    # def sublist(i, j)
+    #   result = []
       
-      if i < j
-        dcons = nth_dll_node(i)
-        (i...j).each do
-          result << dcons.content
-          dcons = dcons.succ
-        end
-      end
+    #   if i < j
+    #     dcons = nth_dll_node(i)
+    #     (i...j).each do
+    #       result << dcons.content
+    #       dcons = dcons.succ
+    #     end
+    #   end
 
-      result
-    end
+    #   result
+    # end
 
     #
     #    Returns empty DoublyLinkedList if negative i is too far
@@ -1547,7 +1589,7 @@ module Containers
       end
     end
 
-    def do_clear
+    def do_do_clear
       unless empty?
         dcons = @store
         @count.times do
@@ -1665,19 +1707,19 @@ module Containers
     #    Inclusive `i`, exclusive `j`
     #    
 #    def subseq(i, j)
-    def sublist(i, j)
-      result = []
+    # def sublist(i, j)
+    #   result = []
       
-      if i < j
-        dcons = nth_dll_node(i)
-        (i...j).each do
-          result << dcons.content
-          dcons = ratchet_forward(dcons)
-        end
-      end
+    #   if i < j
+    #     dcons = nth_dll_node(i)
+    #     (i...j).each do
+    #       result << dcons.content
+    #       dcons = ratchet_forward(dcons)
+    #     end
+    #   end
 
-      result
-    end
+    #   result
+    # end
 
     def make_empty_list
       DoublyLinkedListRatchet.new(type: type, fill_elt: fill_elt, direction: @direction)
@@ -1716,6 +1758,8 @@ module Containers
   #    Links are stored in two hash tables.
   #    
   class DoublyLinkedListHash < DcursorList
+    attr_reader :head # Must be visible for testing??
+
     def initialize(type: Object, fill_elt: nil)
       super(type: type, fill_elt: fill_elt)
       @head = nil
@@ -1748,6 +1792,15 @@ module Containers
       do_reverse
     end
 
+#    protected
+    def next_dnode(node) # Must be visible for testing??
+      @forward[node]
+    end
+
+    def previous_dnode(node)
+      @backward[node]
+    end
+
     private
     def setup_cursor
         Dcursor.new(head: ->() {@head},
@@ -1756,16 +1809,8 @@ module Containers
                     succ: ->(node) {next_dnode(node)})
     end
 
-    def next_dnode(node)
-      @forward[node]
-    end
-
     def set_next_dnode(node, obj)
       @forward[node] = obj
-    end
-
-    def previous_dnode(node)
-      @backward[node]
     end
 
     def set_previous_dnode(node, obj)
@@ -1809,7 +1854,7 @@ module Containers
       end
     end
 
-    def do_clear
+    def do_do_clear
         @head = nil
         @forward.clear
         @backward.clear
@@ -1924,19 +1969,19 @@ module Containers
     #    Inclusive `i`, exclusive `j`
     #    
 #    def subseq(i, j)
-    def sublist(i, j)
-      result = []
+    # def sublist(i, j)
+    #   result = []
       
-      if i < j
-        dnode = nth_dll_node(i)
-        (i...j).each do
-          result << dnode.content
-          dnode = next_dnode(dnode)
-        end
-      end
+    #   if i < j
+    #     dnode = nth_dll_node(i)
+    #     (i...j).each do
+    #       result << dnode.content
+    #       dnode = next_dnode(dnode)
+    #     end
+    #   end
 
-      result
-    end
+    #   result
+    # end
     
     #
     #    Returns empty DoublyLinkedList if negative i is too far
@@ -1997,7 +2042,7 @@ module Containers
     end
     
     private
-    def do_clear
+    def do_do_clear
       @store = {}
     end
 
@@ -2090,7 +2135,7 @@ module Containers
     end
 
     private
-    def do_clear
+    def do_do_clear
       super
       @offset = 0
     end
@@ -2209,17 +2254,17 @@ module Containers
       PersistentList.new(type: @type, fill_elt: @fill_elt)
     end
 
-    def elements
-      elts = []
-      i = iterator
+    # def elements
+    #   elts = []
+    #   i = iterator
 
-      until i.done?
-        elts.push(i.current)
-        i = i.next
-      end
+    #   until i.done?
+    #     elts.push(i.current)
+    #     i = i.next
+    #   end
 
-      elts
-    end
+    #   elts
+    # end
 
     # def iterator
     #   PersistentCollectionIterator.new(done: ->() {empty?},
@@ -2258,7 +2303,7 @@ module Containers
 
     private
     def initialize_list(store, count)
-      list = PersistentList.new(type: @type, fill_elt: @fill_elt)
+      list = make_empty_list
       list.store = store
       list.count = count
       list
@@ -2303,16 +2348,12 @@ module Containers
     end
 
     def do_add(objs)
-      if objs.empty?
-        self
-      else
-        node = nil
-        objs.reverse_each do |elt|
-          node = Node.new(elt, node)
-        end
-
-        initialize_list(Node.append(@store, node), @count + objs.size)
+      node = nil
+      objs.reverse_each do |elt|
+        node = Node.new(elt, node)
       end
+
+      initialize_list(Node.append(@store, node), @count + objs.size)
     end
 
     def adjust_node(store, i, adjustment)
@@ -2367,6 +2408,10 @@ module Containers
       first = [i, size].min
       last = [i+n, size].min
       initialize_list(adjust_node(Node.nthcdr(@store, first), last-first, ->(node) {nil}), last-first)
+    end
+
+    def make_empty_list
+      PersistentList.new(type: type, fill_elt: fill_elt)
     end
   end
 

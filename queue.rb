@@ -45,7 +45,7 @@ module Containers
       size.zero?
     end
 
-    def clear
+    def do_clear
       dequeue until empty?
     end
     
@@ -55,12 +55,12 @@ module Containers
     end
 
     def dequeue
-      raise StandardError.new("Queue is empty.") if empty?
+      raise StandardError.new("#{self.class} is empty.") if empty?
       do_dequeue
     end
 
     def front
-      raise StandardError.new("Queue is empty.") if empty?
+      raise StandardError.new("#{self.class} is empty.") if empty?
       do_front
     end
 
@@ -96,7 +96,7 @@ module Containers
     end
   end
 
-  class RingBuffer < Queue
+  module RingBuffer
     def full?
       raise NoMethodError, "#{self.class} does not implement full?()"
     end
@@ -128,14 +128,16 @@ module Containers
   #    Prosaic array. Assumed to be fixed-length -> manual resize. Queue "wraps around" as long as there is space.
   #    This is traditional `ring buffer`
   #    
-  class ArrayRingBuffer < RingBuffer
+  class ArrayRingBuffer < Queue
+    include RingBuffer
+
     ARRAY_RING_BUFFER_CAPACITY = 20
-    attr_accessor :store, :head, :count
+    attr_accessor :store, :count
 
     def initialize(type: Object)
       super(type: type)
       @store = Array.new(ARRAY_RING_BUFFER_CAPACITY)
-      @head = 0 # Renamed from `front`. Accessor conflicts with `front()`!!
+      @front = 0
       @count = 0
     end
 
@@ -144,22 +146,26 @@ module Containers
     end
 
     def offset(i)
-      (i + @head) % @store.size
+      (i + @front) % @store.size
     end
 
     def full?
       size == @store.size
     end
 
+    def head=(n)  #????????
+      @front = n
+    end
+    
     private
-    def do_resize # Must be accessible to ArrayRingBufferDequeX!
+    def do_resize
       new_store = Array.new(@store.size * 2)
       @count.times do |i|
         new_store[i] = @store[offset(i)]
       end
       
       @store = new_store
-      @head = 0
+      @front = 0
     end
     
     def enqueue_elt(obj)
@@ -170,15 +176,15 @@ module Containers
     def do_dequeue
       discard = front
 
-      @store[@head] = nil
-      @head = offset(1)
+      @store[@front] = nil
+      @front = offset(1)
       @count -= 1
 
       discard
     end
 
     def do_front
-      @store[@head]
+      @store[@front]
     end
   end
 
@@ -196,7 +202,7 @@ module Containers
       @store.size
     end
 
-    def clear
+    def do_clear
       @store = []
     end
 
@@ -228,7 +234,7 @@ module Containers
       @count
     end
 
-    def clear   # Call initialize??
+    def do_clear   # Call initialize??
       @front = nil
       @rear = nil
       @count = 0
@@ -274,7 +280,7 @@ module Containers
       @list.size
     end
 
-    def clear
+    def do_clear
       @list.clear
     end
     
@@ -302,7 +308,7 @@ module Containers
       @list.size
     end
 
-    def clear
+    def do_clear
       @list.clear
     end
     
@@ -334,7 +340,7 @@ module Containers
       @count
     end
 
-    def clear   # Call initialize??
+    def do_clear   # Call initialize??
       @index = nil
       @count = 0
     end
@@ -374,6 +380,8 @@ module Containers
   end
 
   class RecyclingQueue < LinkedQueue
+    include RingBuffer
+
     def initialize(type: Object)
       super(type: type)
       @front = Node.empty_list(LINKED_QUEUE_CAPACITY)
@@ -381,23 +389,22 @@ module Containers
       @ass = @front.last
     end
 
-    def clear
+    def do_clear
       dequeue until empty?
     end
 
+    def full?
+      @rear == @ass
+    end
+
     private
-    def resize
-      raise StandardError.new("resize() called without full store") unless @rear == @ass
+    def do_resize
       more = Node.empty_list(@count + 1)
       @ass.rest = more
       @ass = more.last
     end
 
-    def do_enqueue(obj)
-      if @rear == @ass
-        resize
-      end
-
+    def enqueue_elt(obj)
       @rear.first = obj
       @rear = @rear.rest
       @count += 1
@@ -418,22 +425,19 @@ module Containers
     end
   end
 
-  class LinkedRingBuffer < RingBuffer
+  class LinkedRingBuffer < LinkedQueue
+    include RingBuffer
+
     def initialize(type: Object)
       super(type: type)
-      @front = Node.empty_list(LinkedQueue::LINKED_QUEUE_CAPACITY)
+      @front = Node.empty_list(LINKED_QUEUE_CAPACITY)
       @rear = @front
       @front.last.rest = @front
-      @count = 0
     end
       
-    def size
-      @count
+    def do_clear
+      dequeue until empty?
     end
-
-    # def clear
-    #   dequeue until empty?
-    # end
 
     def full?
       @rear.rest == @front
@@ -461,10 +465,6 @@ module Containers
 
       discard
     end
-
-    def do_front
-      @front.first
-    end
   end
   
   class HashQueue < Queue
@@ -479,7 +479,7 @@ module Containers
       @store.size
     end
 
-    def clear
+    def do_clear
       @store = {}
       @front = 0
       @rear = 0
@@ -505,7 +505,11 @@ module Containers
 
   class PersistentQueue < Queue
     def clear
-      make_empty_persistent_queue
+      if empty?
+        self
+      else
+        make_empty_persistent_queue
+      end
     end
     
     def fill(count: 1000, generator: ->(x) { x })
@@ -545,7 +549,7 @@ module Containers
 
     protected
     def create_queue(front, rear, count)  # private???
-      queue = PersistentLinkedQueue.new(type: @type)
+      queue = make_empty_persistent_queue
       queue.front = front
       queue.rear = rear
       queue.count = count
@@ -679,28 +683,10 @@ module Containers
     end
   end
 
-  #
-  #    Duplicates RingBuffer above!! (Plus some features for Deque)
-  #    
-  class RingBufferDeque < Deque
-    def full?
-      raise NoMethodError, "#{self.class} does not implement full?()"
-    end
-
-    def resize
-      raise StandardError.new("resize() called without full store") unless full?
-      do_resize
-    end
+  module RingBufferDeque
+    include RingBuffer
 
     private
-    def do_enqueue(obj)
-      if full?
-        resize
-      end
-
-      enqueue_elt(obj)
-    end
-
     def do_enqueue_front(obj)
       if full?
         resize
@@ -709,23 +695,14 @@ module Containers
       enqueue_front_elt(obj)
     end
     
-    def do_resize
-      raise NoMethodError, "#{self.class} does not implement do_resize()"
-    end
-
-    def enqueue_elt(obj)
-      raise NoMethodError, "#{self.class} does not implement enqueue_elt()"
-    end
-
     def enqueue_front_elt(obj)
       raise NoMethodError, "#{self.class} does not implement enqueue_front_elt()"
     end
   end
 
-  #
-  #    Single-inheritance necessitates much duplication from ArrayRingBuffer
-  #    
-  class ArrayRingBufferDeque < RingBufferDeque
+  class ArrayRingBufferDeque < Deque
+    include RingBufferDeque
+    
     ARRAY_RING_BUFFER_DEQUE_CAPACITY = 20
 
     def initialize(type: Object)
@@ -773,7 +750,7 @@ module Containers
       discard
     end
 
-    def do_enqueue_front(obj)
+    def enqueue_front_elt(obj)
       @front = offset(-1)
       @store[offset(0)] = obj
       @count += 1
@@ -796,6 +773,36 @@ module Containers
       @store[offset(@count - 1)]
     end
   end
+
+  # class ArrayRingBufferDeque < ArrayRingBuffer
+  #   include RingBufferDeque
+    
+  #   ARRAY_RING_BUFFER_DEQUE_CAPACITY = 20
+
+  #   def initialize(type: Object)
+  #     super(type: type)
+  #   end
+
+  #   private
+  #   def do_enqueue_front(obj)
+  #     @front = offset(-1)
+  #     @store[offset(0)] = obj
+  #     @count += 1
+  #   end
+
+  #   def do_dequeue_rear
+  #     discard = rear
+
+  #     @store[offset(@count - 1)] = nil
+  #     @count -= 1
+
+  #     discard
+  #   end
+
+  #   def do_rear
+  #     @store[offset(@count - 1)]
+  #   end
+  # end
 
   class ArrayRingBufferDequeX < Deque  # RingBufferDeque??
     def initialize(type: Object)
@@ -854,7 +861,7 @@ module Containers
       @list.size
     end
 
-    def clear
+    def do_clear
       @list.clear
     end
     
@@ -896,7 +903,7 @@ module Containers
       @store.size
     end
 
-    def clear
+    def do_clear
       @store = {}
       @front = 0
       @rear = 0
@@ -936,7 +943,11 @@ module Containers
 
   class PersistentDeque < Deque
     def clear
-      make_empty_persistent_deque
+      if empty?
+        self
+      else
+        make_empty_persistent_deque
+      end
     end
 
     def fill(count: 1000, generator: ->(x) { x })
@@ -976,7 +987,7 @@ module Containers
 
     protected
     def initialize_deque(front, rear, count)
-      dq = PersistentLinkedDeque.new(type: @type)
+      dq = make_empty_persistent_deque
       dq.front = front
       dq.rear = rear
       dq.count = count

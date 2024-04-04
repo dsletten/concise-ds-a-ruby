@@ -18,6 +18,8 @@ require 'benchmark'
 
 class TestList < Test::Unit::TestCase
   def test_constructor(constructor)
+    assert_raises(ArgumentError, "Type of fill_elt must match list type.") { constructor.call(type: String) }
+
     list = constructor.call
     assert(list.empty?, "New list should be empty.")
     assert(list.size.zero?, "Size of new list should be zero.")
@@ -29,8 +31,10 @@ class TestList < Test::Unit::TestCase
   def test_empty?(constructor)
     list = constructor.call
     assert(list.empty?, "New list should be empty.")
+
     list.add(:foo)
     assert(!list.empty?, "List with elt should not be empty.")
+
     list.delete(0)
     assert(list.empty?, "Empty list should be empty.")
   end
@@ -69,8 +73,8 @@ class TestList < Test::Unit::TestCase
   def test_clear(constructor)
     count = 1000
     list = constructor.call.fill(count: count)
-
     assert(!list.empty?, "List should have #{count} elements.")
+
     list.clear
     assert(list.empty?, "List should be empty.")
     assert(list.size.zero?, "Size of empty list should be zero.")
@@ -93,6 +97,13 @@ class TestList < Test::Unit::TestCase
     1.upto(count) do |i|
       assert_equal(i, list.contains?(i), "The list should contain the value #{i}")
     end
+  end
+
+  def test_contains_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+
+    assert_raises(ArgumentError, "List can't contain value of wrong type.") { list.contains?(:foo) }
   end
 
   def test_contains_predicate(constructor)
@@ -124,8 +135,10 @@ class TestList < Test::Unit::TestCase
     doubly_linked_list = Containers::DoublyLinkedList.new.fill(count: count)
 
     assert(list.equals(list), "Equality should be reflexive.")
+
     assert(list.equals(array_list), "Lists with same content should be equal.")
     assert(array_list.equals(list), "Equality should be symmetric.")
+
     assert(list.equals(doubly_linked_list), "Lists with same content should be equal.")
     assert(doubly_linked_list.equals(list), "Equality should be symmetric.")
   end
@@ -139,7 +152,6 @@ class TestList < Test::Unit::TestCase
     assert(!list.equals(doubly_linked_list), "Default test should fail.")
 
     char_equal = ->(item, elt) { item.casecmp(elt).zero? }
-
     assert(list.equals(array_list, test: char_equal), "Specific test should succeed.")
     assert(list.equals(doubly_linked_list, test: char_equal), "Specific test should succeed.")
   end
@@ -186,14 +198,25 @@ class TestList < Test::Unit::TestCase
 
     1.upto(count) do |i|
       list.add(i)
-      assert_equal(i, list.size, "Size of list should be #{i} not #{list.size}")
       assert_equal(i, list.get(-1), "Last element of list should be #{i} not #{list.get(-1)}")
     end
   end
+
+  def test_add_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't ADD value of wrong type to list.") { list.add(1.0) }    
+
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't ADD value of wrong type to list.") { list.add(1, 2, :k) }    
   
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+    assert_raises(ArgumentError, "Can't ADD value of wrong type to list.") { list.add(1.0) }    
+  end    
+
 #  def test_insert(constructor, fill_elt=nil)            # ?????????????????????????????????????????????????????????
   def _test_insert(constructor, fill_elt)
-    list = constructor.call(type: Object, fill_elt: fill_elt)
+    list = constructor.call(fill_elt: fill_elt)
     count = 6
     elt1 = :foo
     elt2 = :bar
@@ -203,7 +226,7 @@ class TestList < Test::Unit::TestCase
     assert_equal(list.size, count, "Insert should extend list.")
     assert_equal(list.get(count-1), elt1, "Inserted element should be #{elt1}")
 #    assert_equal(list[0], fill_elt, "Empty elements should be filled with #{fill_elt}")
-    assert_equal(list.get(0), fill_elt, "Empty elements should be filled with #{fill_elt}")
+    assert(list.slice(0, count-1).elements.all? {|elt| elt == fill_elt}, "Empty elements should be filled with #{fill_elt}")
 
     list.insert(0, elt2)
 
@@ -220,27 +243,21 @@ class TestList < Test::Unit::TestCase
     _test_insert(constructor, 0)
   end
 
+  def test_insert_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't insert value of wrong type into list.") { list.insert(0, 1.0) }    
+    
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+    assert_raises(ArgumentError, "Can't insert value of wrong type into list.") { list.insert(0, 1.0) }    
+  end
+
   def test_insert_negative_index(constructor)
     list = constructor.call.add(0)
 
     1.upto(10) do |i|
       list.insert(-i, i)
     end
-
-#     elts = []
-#     list.size.times do |i|
-# #      elts << list[i]
-#       elts << list.get(i)
-#     end
-
-    # expected = []
-    # 10.downto(0) do |i|
-    #   expected << i
-    # end
-    
-    # expected = (10..0).to_a.reverse
-
-    # assert_equal(elts, expected, "Inserted elements should be: #{expected} but found: #{elts}")
 
     iterator = list.iterator
     10.downto(0) do |i|
@@ -381,19 +398,29 @@ class TestList < Test::Unit::TestCase
   end
 
   def test_set(constructor)
+    count = 1000
     list = constructor.call
-    0.upto(10) do |i|
+    0.upto(count) do |i|
       assert_equal(i, list.size, "Prior to set() size should be #{i} not #{list.size}")
 #      list[i] = i
       list.set(i, i)
       assert_equal(i+1, list.size, "After set() size should be #{i+1} not #{list.size}")
     end
 
-    0.upto(10) do |i|
+    0.upto(count) do |i|
 #      assert_equal(list[i], i, "Element #{i} should have value #{i} not #{list[i]}")
       assert_equal(i, list.get(i), "Element #{i} should have value #{i} not #{list.get(i)}")
     end
 
+  end
+
+  def test_set_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0)
+    assert_raises(ArgumentError, "Can't set value of wrong type in list.") { list.set(0, 1.0) }    
+    
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+    assert_raises(ArgumentError, "Can't set value of wrong type in list.") { list.set(0, 1.0) }    
   end
 
   def test_set_negative_index(constructor)
@@ -417,7 +444,7 @@ class TestList < Test::Unit::TestCase
 #    list[10] = :foo
     list.set(index, elt)
 
-    assert_equal(list.fill_elt, list.get(0), "Empty elements should be filled with #{list.fill_elt}")
+    assert(list.slice(0, index).elements.all? {|elt| elt == list.fill_elt}, "Empty elements should be filled with #{list.fill_elt}")
     assert_equal(index+1, list.size, "List should expand to accommodate out-of-bounds index.")
     assert_equal(elt, list.get(index), "Element #{index} should be #{elt}")
   end
@@ -429,6 +456,13 @@ class TestList < Test::Unit::TestCase
     1.upto(count) do |i|
       assert_equal(i-1, list.index(i), "The value #{i-1} should be located at index #{i}")
     end
+  end
+
+  def test_index_wrong_type(constructor)
+    count = 1000
+    list = constructor.call(type: Integer, fill_elt: 0).fill(count: count)
+
+    assert_raises(ArgumentError, "Value of wrong type does not exist at any index.") { list.index(:foo) }
   end
 
   def test_index_predicate(constructor)
@@ -511,6 +545,46 @@ class TestList < Test::Unit::TestCase
 
     forward = backward.reverse
     assert_equal(original, forward, "Reversed reversed list should be: #{original.slice(0, 20)} instead of: #{forward.slice(0, 20)}")
+  end
+
+  def test_append(constructor)
+    count = 1000
+    list1 = constructor.call.fill(count: count)
+    list2 = constructor.call(type: Numeric, fill_elt: 0).fill(count: count, generator: ->(x) { x.to_f })
+    list3 = list1.append(list2)
+    list4 = list2.append(list1)
+    list_x = constructor.call
+
+    assert_equal(list1.type, list3.type, "Type of result list should be #{list1.class} not #{list3.class}")
+    assert_equal(list2.type, list4.type, "Type of result list should be #{list2.class} not #{list4.class}")
+    assert_equal(list3.size, list1.size + list2.size, "Result list should have same size as sum of input sizes")
+    assert_equal(list4.size, list1.size + list2.size, "Result list should have same size as sum of input sizes")
+    assert(list1.equals(list3.slice(0, count)), "Front of list3 should match list1")
+    assert(list2.equals(list4.slice(0, count)), "Front of list4 should match list2")
+    assert(list2.equals(list3.slice(count, count)), "Rear of list3 should match list2")
+    assert(list1.equals(list4.slice(count, count)), "Rear of list4 should match list1")
+
+    assert(list1.equals(list1.append(list_x)), "Appending empty list yields equal list")
+    assert(list1.equals(list_x.append(list1)), "Appending empty list yields equal list")
+  end
+  
+  def test_append_different_class(constructor)
+    count = 1000
+    list = constructor.call.fill(count: count)
+    array_list = Containers::ArrayList.new.fill(count: count)
+    doubly_linked_list = Containers::DoublyLinkedList.new.fill(count: count)
+
+    assert_equal(list.class, list.append(array_list).class, "Appending list yields instance of same class as first list.")
+    assert_equal(list.class, list.append(doubly_linked_list).class, "Appending list yields instance of same class as first list.")
+    assert_equal(list.class, list.append(array_list.append(doubly_linked_list)).class, "Appending list yields instance of same class as first list.")
+  end
+
+  def test_append_type_compatibility(constructor)
+    list1 = constructor.call.fill(count: 20)
+    list2 = constructor.call(type: String, fill_elt: "").add(*("a".."z").to_a)
+
+    assert_equal(list1.type, list1.append(list2).type, "Appending specialized list to more general list succeeds.")
+    assert_raises(ArgumentError, "Cannot append more general list to specialized list.") { list2.append(list1) }
   end
 
   # def test_time(constructor)
@@ -612,29 +686,37 @@ return
     puts
   end
 
-  # def test_wave(constructor)
-  #   list = constructor.call
-  #   fill(list, 5000)
-  #   assert_equal(5000, list.size, "Size of list should be 5000")
-  #   3000.times { list.pop }
-  #   assert_equal(2000, list.size, "Size of list should be 2000")
-    
-  #   fill(list, 5000)
-  #   assert_equal(7000, list.size, "Size of list should be 7000")
-  #   3000.times { list.pop }
-  #   assert_equal(4000, list.size, "Size of list should be 4000")
+  def test_wave(constructor)
+    list = constructor.call
 
-  #   fill(list, 5000)
-  #   assert_equal(9000, list.size, "Size of list should be 9000")
-  #   3000.times { list.pop }
-  #   assert_equal(6000, list.size, "Size of list should be 6000")
+    Benchmark.bm do |run|
+      run.report("Test wave\n") do
+        list.fill(count: 5000)
+        assert_equal(5000, list.size, "Size of list should be 5000")
 
-  #   fill(list, 4000)
-  #   assert_equal(10000, list.size, "Size of list should be 10000")
-  #   10000.times { list.pop }
-  #   assert(list.empty?, "List should be empty.")
-  # end
+        3000.times { list.delete(0) }
+        assert_equal(2000, list.size, "Size of list should be 2000")
+        
+        list.fill(count: 5000)
+        assert_equal(7000, list.size, "Size of list should be 7000")
 
+        3000.times { list.delete(0) }
+        assert_equal(4000, list.size, "Size of list should be 4000")
+
+        list.fill(count: 5000)
+        assert_equal(9000, list.size, "Size of list should be 9000")
+
+        3000.times { list.delete(0) }
+        assert_equal(6000, list.size, "Size of list should be 6000")
+
+        list.fill(count: 4000)
+        assert_equal(10000, list.size, "Size of list should be 10000")
+
+        10000.times { list.delete(0) }
+        assert(list.empty?, "List should be empty.")
+      end
+    end
+  end
 end
 
 def list_test_suite(tester, constructor)
@@ -645,6 +727,7 @@ def list_test_suite(tester, constructor)
   tester.test_clear(constructor)
   tester.test_elements(constructor)
   tester.test_contains?(constructor)
+  tester.test_contains_wrong_type(constructor)
   tester.test_contains_predicate(constructor)
   tester.test_contains_arithmetic(constructor)
   tester.test_equals(constructor)
@@ -652,8 +735,10 @@ def list_test_suite(tester, constructor)
   tester.test_equals_transform(constructor)
   tester.test_each(constructor)
   tester.test_add(constructor)
+  tester.test_add_wrong_type(constructor)
   tester.test_insert(constructor)
   tester.test_insert_fill_zero(constructor)
+  tester.test_insert_wrong_type(constructor)
   tester.test_insert_negative_index(constructor)
   tester.test_insert_end(constructor)
   tester.test_insert_offset(constructor)
@@ -663,16 +748,22 @@ def list_test_suite(tester, constructor)
   tester.test_get(constructor)
   tester.test_get_negative_index(constructor)
   tester.test_set(constructor)
+  tester.test_set_wrong_type(constructor)
   tester.test_set_negative_index(constructor)
   tester.test_set_out_of_bounds(constructor)
   tester.test_index(constructor)
+  tester.test_index_wrong_type(constructor)
   tester.test_index_predicate(constructor)
   tester.test_index_arithmetic(constructor)
   tester.test_slice(constructor)
   tester.test_slice_negative_index(constructor)
   tester.test_slice_corner_cases(constructor)
   tester.test_reverse(constructor)
+  tester.test_append(constructor)
+  tester.test_append_different_class(constructor)
+  tester.test_append_type_compatibility(constructor)
   tester.test_time(constructor)
+  tester.test_wave(constructor)
 end
   
 class TestArrayList < TestList
