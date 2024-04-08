@@ -25,8 +25,12 @@ class Counter
     raise NoMethodError, "#{self.class} does not implement advance()"
   end
   
-  def init
-    raise NoMethodError, "#{self.class} does not implement init()"
+  def set
+    raise NoMethodError, "#{self.class} does not implement set()"
+  end
+  
+  def reset
+    set(0)
   end
   
   def to_s
@@ -37,7 +41,7 @@ end
 class CyclicCounter < Counter
   attr_reader :index, :modulus
 
-  def initialize(modulus)
+  def initialize(modulus = 1)
     raise ArgumentError.new("Modulus must be at least 1.") unless modulus >= 1
     @index = 0
     @modulus = modulus
@@ -47,7 +51,7 @@ class CyclicCounter < Counter
     @index = (@index + n) % @modulus
   end
 
-  def init(n = 0)
+  def set(n)
     @index = n % @modulus
   end
 end
@@ -65,7 +69,7 @@ class PersistentCyclicCounter < Counter
     PersistentCyclicCounter.new(index: @index + n, modulus: @modulus)
   end
 
-  def init(n = 0)
+  def set(n)
     PersistentCyclicCounter.new(index: n, modulus: @modulus)
   end
 end
