@@ -21,6 +21,9 @@ class TestCounter < Test::Unit::TestCase
     n = 10
     assert(n == constructor.call(n).modulus, "Modulus of counter should be #{n}.")
     assert_raises(ArgumentError, "Can't create counter with modulus of 0.") { constructor.call(0) }
+
+    assert(constructor.call.index.zero?, "New default counter index should be zero.")
+    assert(1 == constructor.call.modulus, "Modulus of default counter should be 1.")
   end
 
   def test_advance(constructor)
@@ -92,7 +95,7 @@ class TestCounter < Test::Unit::TestCase
 end
 
 def counter_test_suite(tester, constructor)
-  puts("Testing #{constructor.call(1).class}")
+  puts("Testing #{constructor.call.class}")
   tester.test_constructor(constructor)
   tester.test_advance(constructor)
   tester.test_set(constructor)
@@ -102,6 +105,6 @@ end
   
 class TestCyclicCounter < TestCounter
   def test_it
-    counter_test_suite(self, lambda {|n| CyclicCounter.new(n)})
+    counter_test_suite(self, lambda {|n=1| CyclicCounter.new(n)})
   end
 end

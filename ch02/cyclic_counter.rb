@@ -34,7 +34,7 @@ class Counter
   end
   
   def to_s
-    "[#{index}/#{modulus}]"
+    "#{self.class} [#{index}/#{modulus}]"
   end
 end
 

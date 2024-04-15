@@ -21,6 +21,10 @@ class TestPersistentCounter < Test::Unit::TestCase
     n = 10
     assert(n == constructor.call(modulus: n).modulus, "Modulus of counter should be #{n}.")
     assert_raises(ArgumentError, "Can't create counter with modulus of 0.") { constructor.call(modulus: 0) }
+
+    assert(constructor.call.index.zero?, "New default counter index should be zero.")
+    assert(1 == constructor.call.modulus, "Modulus of default counter should be 1.")
+    assert(constructor.call(index: 5).index.zero?, "New default counter index should be zero.")
   end
 
   def test_advance(constructor)
@@ -77,6 +81,6 @@ end
   
 class TestPersistentCyclicCounter < TestPersistentCounter
   def test_it
-    persistent_counter_test_suite(self, lambda {|modulus: 1| PersistentCyclicCounter.new(modulus: modulus)})
+    persistent_counter_test_suite(self, lambda {|index: 0, modulus: 1| PersistentCyclicCounter.new(index: index, modulus: modulus)})
   end
 end
